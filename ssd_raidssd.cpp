@@ -61,6 +61,11 @@ RaidSsd::~RaidSsd(void)
 	return;
 }
 
+void RaidSsd::swap_ssd(uint id){
+	Ssd temp;
+	Ssds[id] = temp;
+}
+
 double RaidSsd::event_arrive(enum event_type type, ulong logical_address, uint size, double start_time)
 {
 	return event_arrive(type, logical_address, size, start_time, NULL);

@@ -49,7 +49,6 @@ namespace ssd {
 /* Uncomment to disable asserts for production */
 #define NDEBUG
 
-
 /* some obvious typedefs for laziness */
 typedef unsigned int uint;
 typedef unsigned long ulong;
@@ -249,8 +248,76 @@ class FtlImpl_BDftl;
 class Ram;
 class Controller;
 class Ssd;
+class RaidParent;
+class WlRaid;
+class SaRaid;
+class DiffRaid;
+class Raid5;
+class Raid6;
 
+//sscanf(line, "%u,%lu,%u,%c,%lf", &diskno, &vaddr, &size, &op, &arrive_time);
+struct TraceRecord{
+	public:
+	double arrive_time;
+    uint diskno;
+    ulong vaddr;
+    uint size;
+    uint op;
+};
 
+struct MigrationRecord{
+	public:
+	double time;
+    uint ssd_id;
+    double size;
+};
+
+class RaidParent{
+	public:
+		uint ssd_count;
+		uint pages_per_ssd;
+		uint stripe_count;
+		uint pages_per_sblock;
+		uint parity_count;
+		bool ssd_record;
+		double ssd_erasures;
+		
+		RaidSsd raid_ssd;
+		std::vector<std::vector<uint>> smap; //the map[i][j] means the logical block id of i stripe's j ssd
+
+		std::map<uint, std::vector<double>> num_reads;
+		std::map<uint, std::vector<double>> num_writes;
+		vector<double> ssd_reads;
+		vector<double> ssd_writes;
+		
+		RaidParent( uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1  );
+		virtual double event_arrive( const TraceRecord& op );
+		void init();
+		virtual void init_map();
+
+		void check_erasure_and_swap_ssd( int opSize, uint* ssd_ids, int num, double time );
+		void swap_ssd( uint ssd_id, double time );
+};
+
+class SaRaid:public RaidParent{
+	SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);
+};
+
+class WlRaid:public RaidParent{
+	WlRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);
+};
+
+class DiffRaid:public RaidParent{
+	DiffRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);
+};
+
+class Raid5:public RaidParent{
+	Raid5(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);
+};
+
+class Raid6:public RaidParent{
+	Raid6(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);
+};
 
 /* Class to manage physical addresses for the SSD.  It was designed to have
  * public members like a struct for quick access but also have checking,
@@ -1084,13 +1151,13 @@ public:
 	void reset_statistics();
 	void write_statistics(FILE *stream);
 	void write_header(FILE *stream);
+	void swap_ssd(uint id);
 	const Controller &get_controller(void) const;
 
 	void print_ftl_statistics();
+	Ssd *Ssds;
 private:
 	uint size;
-
-	Ssd *Ssds;
 
 };
 } /* end namespace ssd */
