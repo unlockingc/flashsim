@@ -1,11 +1,16 @@
-Raid6::Raid6(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1):\
+#include <new>
+#include <assert.h>
+#include <stdio.h>
+#include "ssd.h"
+
+Raid6::Raid6(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_, uint pages_per_sblock_):\
 RaidParent( ssd_count_, pages_per_ssd_, parity_count_, ssd_erasures_, pages_per_sblock_  )
 {
     assert(ssd_count == 6);
     init();
 }
 
-virtual Raid6::init_map(){
+virtual void Raid6::init_map(){
     int temp1 = 0;
     int temp2 = 0;
     for( uint i = 0; i < stripe_count, i++ ){

@@ -5,25 +5,26 @@
 
 using namespace ssd;
 
-RaidParent::RaidParent( uint ssd_count_, uint pages_per_ssd_, uint parity_count_, uint pages_per_sblock_ )\
+RaidParent::RaidParent( uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_, uint pages_per_sblock_ )\
 :ssd_count(ssd_count_),pages_per_ssd(pages_per_ssd_),pages_per_sblock(pages_per_sblock_),\
-stripe_count(pages_per_ssd_/pages_per_sblock_), parity_count(parity_count_), ssd_record(ssd_record_),\
-ssd_erasures(ssd_erasures_),ssd_reads(ssd_count_,0),ssd_write(ssd_count_,0)\
-smap(pages_per_ssd_/pages_per_sblock_,std::vector<uint>(ssd_count_,0))
-{
-	init_map( init_raid_type );
+stripe_count(pages_per_ssd_/pages_per_sblock_), parity_count(parity_count_),\
+ssd_erasures(ssd_erasures_),ssd_reads(ssd_count_,0),ssd_writes(ssd_count_,0),\
+smap(pages_per_ssd_/pages_per_sblock_,std::vector<uint>(ssd_count_,0)),erasure_left(ssd_count_,0) {
+	for( int i = 0; i < ssd_count; i ++ ){
+		erasure_left[i] = ssd_erasures;
+	}
 }
 
 void RaidParent::init(){
 	this->init_map();
 }
 
-virtual RaidParent::init_map(){
+void RaidParent::init_map(){
 	fprintf(stderr,"error: virtual method RaidParent::init_map in parent class should not be called");
 }
 
 
-virtual double RaidParent::event_arrive( const TraceRecord& op){
+double RaidParent::event_arrive( const TraceRecord& op){
 	fprintf(stderr,"error: virtual method RaidParent::event_arrive in parent class should not be called");
 }
 
@@ -61,11 +62,11 @@ void RaidParent::swap_ssd( uint ssd_id, double time ) {
 	erasure_left[ssd_id] = ssd_erasures;
 
 	//record data migrate cost
-	MigrationRecord temp;
-	temp.time = time;
-	temp.size = size;
-	temp.ssd_id = ssd_id;
-	migration.push_back(temp);
+	MigrationRecord temp_m;
+	temp_m.time = time;
+	temp_m.size = size;
+	temp_m.ssd_id = ssd_id;
+	migrations.push_back(temp_m);
 
-	erasure_left[ssd_id] -= temp.size;
+	erasure_left[ssd_id] -= temp_m.size;
 }

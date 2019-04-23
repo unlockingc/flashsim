@@ -248,76 +248,13 @@ class FtlImpl_BDftl;
 class Ram;
 class Controller;
 class Ssd;
+class RaidSsd;
 class RaidParent;
 class WlRaid;
 class SaRaid;
 class DiffRaid;
 class Raid5;
 class Raid6;
-
-//sscanf(line, "%u,%lu,%u,%c,%lf", &diskno, &vaddr, &size, &op, &arrive_time);
-struct TraceRecord{
-	public:
-	double arrive_time;
-    uint diskno;
-    ulong vaddr;
-    uint size;
-    uint op;
-};
-
-struct MigrationRecord{
-	public:
-	double time;
-    uint ssd_id;
-    double size;
-};
-
-class RaidParent{
-	public:
-		uint ssd_count;
-		uint pages_per_ssd;
-		uint stripe_count;
-		uint pages_per_sblock;
-		uint parity_count;
-		bool ssd_record;
-		double ssd_erasures;
-		
-		RaidSsd raid_ssd;
-		std::vector<std::vector<uint>> smap; //the map[i][j] means the logical block id of i stripe's j ssd
-
-		std::map<uint, std::vector<double>> num_reads;
-		std::map<uint, std::vector<double>> num_writes;
-		vector<double> ssd_reads;
-		vector<double> ssd_writes;
-		
-		RaidParent( uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1  );
-		virtual double event_arrive( const TraceRecord& op );
-		void init();
-		virtual void init_map();
-
-		void check_erasure_and_swap_ssd( int opSize, uint* ssd_ids, int num, double time );
-		void swap_ssd( uint ssd_id, double time );
-};
-
-class SaRaid:public RaidParent{
-	SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);
-};
-
-class WlRaid:public RaidParent{
-	WlRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);
-};
-
-class DiffRaid:public RaidParent{
-	DiffRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);
-};
-
-class Raid5:public RaidParent{
-	Raid5(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);
-};
-
-class Raid6:public RaidParent{
-	Raid6(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);
-};
 
 /* Class to manage physical addresses for the SSD.  It was designed to have
  * public members like a struct for quick access but also have checking,
@@ -1108,6 +1045,8 @@ public:
 
 	void print_ftl_statistics();
 	double ready_at(void);
+	ssd::uint get_num_valid(const Address &address) const;
+
 private:
 	enum status read(Event &event);
 	enum status write(Event &event);
@@ -1124,7 +1063,7 @@ private:
 	enum block_state get_block_state(const Address &address) const;
 	void get_free_page(Address &address) const;
 	ssd::uint get_num_free(const Address &address) const;
-	ssd::uint get_num_valid(const Address &address) const;
+	//ssd::uint get_num_valid(const Address &address) const;
 	ssd::uint get_num_invalid(const Address &address) const;
 	Block *get_block_pointer(const Address & address);
 
@@ -1160,6 +1099,97 @@ private:
 	uint size;
 
 };
+
+//sscanf(line, "%u,%lu,%u,%c,%lf", &diskno, &vaddr, &size, &op, &arrive_time);
+struct TraceRecord{
+	public:
+	double arrive_time;
+    uint diskno;
+    ulong vaddr;
+    uint size;
+    uint op;
+	TraceRecord( uint diskno_, ulong vaddr_, uint size_, uint op_, double arrive_time_ ):\
+	diskno(diskno_),vaddr(vaddr_),size(size_),op(op_),arrive_time(arrive_time_){}
+};
+
+struct MigrationRecord{
+	public:
+	double time;
+    uint ssd_id;
+    double size;
+};
+
+class RaidParent{
+	public:
+		uint ssd_count;
+		uint pages_per_ssd;
+		uint stripe_count;
+		uint pages_per_sblock;
+		uint parity_count;
+		bool ssd_record;
+		double ssd_erasures;
+		
+		RaidSsd raid_ssd;
+		std::vector<std::vector<uint>> smap; //the map[i][j] means the logical block id of i stripe's j ssd
+		std::vector<double> erasure_left;
+
+		std::map<uint, std::vector<double>> num_reads;
+		std::map<uint, std::vector<double>> num_writes;
+		std::vector<double> ssd_reads;
+		std::vector<double> ssd_writes;
+		std::vector<MigrationRecord> migrations;
+		
+		RaidParent( uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures = 40000, uint pages_per_sblock_ = 1 );
+		virtual double event_arrive( const TraceRecord& op );
+		void init();
+		virtual void init_map();
+
+		void check_erasure_and_swap_ssd( int opSize, uint* ssd_ids, int num, double time );
+		virtual void swap_ssd( uint ssd_id, double time );
+};
+
+class SaRaid:public RaidParent{
+	public:
+		double last_rtime,time_thre,diff_percent_,max_mig,var_thre;
+		std::vector<double> diff_erasures;
+		SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1,double time_thre_ = 600, double max_mig_ = 400*1024, double diff_percent_ = 0.05,double var_thre_ = 0.0003　);
+		void check_reblance(const TraceRecord& op);
+		uint get_migrate_blocks_for_write( double var );
+		bool need_reblance(const TraceRecord& op);
+};
+
+class WlRaid:public RaidParent{
+	public:
+		double var_thre;
+		ulong last_parity_loop;
+		std::vector<ulong> last_parity_dis;
+
+		std::vector<double> erasure_used;
+		WlRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1, double var_thre_ =  0.0003);
+		void redis_map( std::vector<ulong> new_parity_dis );
+};
+
+class DiffRaid:public RaidParent{
+	public:
+		std::vector<uint> parity_dis;
+		uint parity_loop;
+		bool shifting;
+		DiffRaid( std::vector<uint> parity_dis_, uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1, bool shifting_ = true);
+		virtual void swap_ssd( uint ssd_id, double time )
+		void adjust_parity_distribution( uint ssd_id, double time );
+};
+
+class Raid5:public RaidParent{
+	public:
+		Raid5(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);
+};
+
+class Raid6:public RaidParent{
+	public:
+		Raid6(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);
+};
+
+
 } /* end namespace ssd */
 
 #endif
