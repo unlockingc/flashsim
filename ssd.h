@@ -1151,8 +1151,9 @@ class RaidParent{
 class SaRaid:public RaidParent{
 	public:
 		double last_rtime,time_thre,diff_percent_,max_mig,var_thre;
+		bool read_opt;
 		std::vector<double> diff_erasures;
-		SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1,double time_thre_ = 600, double max_mig_ = 400*1024, double diff_percent_ = 0.05,double var_thre_ = 0.0003　);
+		SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1,double time_thre_ = 600, double max_mig_ = 400*1024, double diff_percent_ = 0.05,double var_thre_ = 0.0003, bool read_opt_ = false　);
 		void check_reblance(const TraceRecord& op);
 		uint get_migrate_blocks_for_write( double var );
 		bool need_reblance(const TraceRecord& op);

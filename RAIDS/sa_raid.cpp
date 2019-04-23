@@ -4,9 +4,9 @@
 #include "ssd.h"
 #include <algorithm> 
 
-SaRaid::SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_, uint pages_per_sblock_, double time_thre_, double max_mig_, double diff_percent, double var_thre_):\
+SaRaid::SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_, uint pages_per_sblock_, double time_thre_, double max_mig_, double diff_percent, double var_thre_, bool read_opt_):\
 RaidParent( ssd_count_, pages_per_ssd_, parity_count_, ssd_erasures_, pages_per_sblock_  ), time_thre(time_thre_), last_rtime(0), diff_erasures(ssd_count_, 0),\
-max_mig(max_mig_),diff_percent(diff_percent_),var_thre(var_thre_)
+max_mig(max_mig_),diff_percent(diff_percent_),var_thre(var_thre_), read_opt(read_opt_)
 {
     assert(ssd_count == 5);
     assert(parity_count == 1);
@@ -94,6 +94,19 @@ struct Stripe_oc{
     Strope_oc( uint id_, ulong val_ ):id(id_), val(val_){} 
 
     bool operator < (Stripe_oc const & a, Stripe_oc const & b)
+    {
+        return a.val < b.val;
+    }
+};
+
+struct Read_pair{
+    uint id;
+    uint ssd1,ssd2;
+    ulong val;
+    Read_pair():val(0){}
+    Read_pair( uint id_, uint ssd1_, uint ssd2_, ulong val_ ):id(id_),ssd1(ssd1_), ssd2(ssd2_),val(val_){} 
+
+    bool operator < (Read_pair const & a, Read_pair const & b)
     {
         return a.val < b.val;
     }
@@ -203,6 +216,84 @@ void SaRaid::check_reblance(const TraceRecord& op){
             }
         }
         //读均衡
+        if(read_opt){
+            std::vector<Read_pair> read_rank;
+            read_rank.clear();
+            std::map<uint, std::vector<double>>::iterator it;
+            uint max_id, min_id;
+            ulong max = 0; min = 0;
+            for(it=num_reads.begin();it!=num_reads.end();++it){
+                min = it->second[0];
+                max = it->second[0];
+                max_id = 0;
+                min_id = 0;
+                for( int i = 0; i < ssd_count; i ++ ){
+                    if( it->second[i] > max ){
+                        max_id = i;
+                        max = it->second[i];
+                    } else if( it->second[i] < min ){
+                        min_id = i;
+                        min = it->second[i];
+                    }
+                }
+                if( max - min > 10)//todo: give a num
+                {
+                    Read_pair temp(it->first, max_id, min_id, max - min);
+                    read_rank.push_back(temp);
+                }
+            }
+        }
+
+        sort( read_rank.begin(),read_rank.end() );
+
+        int miged = 0;
+
+        double read_mean = 0;
+        double read_need[ssd_count];
+        for( int i = 0; i < ssd_count; i++ ){
+            read_mean += ssd_reads[i];
+        }
+        read_mean = read_mean/ssd_count;
+
+        for( int i = 0; i < ssd_count; i++ ){
+            need[i] = ssd_reads[i] - read_mean;
+        }
+
+        for( int i = read_rank.size()-1; i>=0; i -- ){
+            if(miged >= max_mig){
+                break;
+            }
+
+            if( need[read_rank[i].ssd1] > 0 && need[read_rank[i].ssd2] < 0 ){
+
+                for( int k = 0; k < ssd_count; k ++ ){
+                    if( smap[read_rank[i].id][k] == read_rank[i].ssd1 ){
+                        smap[read_rank[i].id][k] = read_rank[i].ssd2;
+                    }
+
+                    if( smap[read_rank[i].id][k] == read_rank[i].ssd2 ){
+                        smap[read_rank[i].id][k] = read_rank[i].ssd1;
+                    }
+                }
+
+                for( int j = 0; j < pages_per_sblock; i ++)
+                {
+                    raid_ssd.Ssds[read_rank[i].ssd1].event_arrive(READ, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
+                    raid_ssd.Ssds[read_rank[i].ssd2].event_arrive(WRITE, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
+                    raid_ssd.Ssds[read_rank[i].ssd2].event_arrive(READ, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
+                    raid_ssd.Ssds[read_rank[i].ssd1].event_arrive(WRITE, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
+                }
+            }
+        }
+
+        //clean data
+        num_writes.clear();
+        num_reads.clear();
+        
+        for( int i = 0; i < ssd_count; i++ ) {
+            ssd_writes[i] = 0;
+            ssd_reads[i] = 0; 
+        }
     }
 
 }
