@@ -7,6 +7,7 @@ Raid6::Raid6(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ss
 RaidParent( ssd_count_, pages_per_ssd_, parity_count_, ssd_erasures_, pages_per_sblock_  )
 {
     assert(ssd_count == 6);
+    assert( parity_count == 2);
     init();
 }
 

@@ -255,6 +255,8 @@ class SaRaid;
 class DiffRaid;
 class Raid5;
 class Raid6;
+class TraceReader;
+
 
 /* Class to manage physical addresses for the SSD.  It was designed to have
  * public members like a struct for quick access but also have checking,
@@ -1190,6 +1192,16 @@ class Raid6:public RaidParent{
 		Raid6(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);
 };
 
+class TraceReader{
+	std::string filename;
+	char buffer[100];
+	TraceRecord op;
+	ulong line_now;
+	FILE *trace_file;
+
+	TraceReader( std::string filename_ );
+	bool read_next( TraceRecord& op );
+};
 
 } /* end namespace ssd */
 
