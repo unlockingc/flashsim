@@ -2,6 +2,10 @@
 #include <assert.h>
 #include <stdio.h>
 #include "ssd.h"
+#include <iostream>
+#include <cstdlib>
+
+using namespace ssd;
 
 DiffRaid::DiffRaid(std::vector<uint> parity_dis_, uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_, uint pages_per_sblock_, bool shifting_):\
 RaidParent( ssd_count_, pages_per_ssd_, parity_count_, ssd_erasures_, pages_per_sblock_  ),\
@@ -16,7 +20,7 @@ parity_dis(parity_dis_),parity_loop(0),shifting(shifting_)
     init();
 }
 
-virtual void DiffRaid::init_map(){
+void DiffRaid::init_map(){
     std::vector<uint> parity_b(ssd_count, 0);
     parity_b[0] = parity_dis[0];
     for( int i = 1; i < parity_dis.size(); i++ ){
@@ -28,7 +32,7 @@ virtual void DiffRaid::init_map(){
     int p = 0;
     int current = 0;
 
-    for( uint i = 0; i < stripe_count, i++ ){
+    for( uint i = 0; i < stripe_count; i++ ){
         smap[i][ssd_count - 1] = current;
 
         for( uint j = 0; j < ssd_count; j ++ ){
@@ -46,11 +50,11 @@ virtual void DiffRaid::init_map(){
     }
 }
 
-virtual double DiffRaid::event_arrive( const TraceRecord& op ){
+double DiffRaid::event_arrive( const TraceRecord& op ){
     
     //calculate tranlated addr and blocks need to be operated
     uint ssd_ids[1 + parity_count];
-	int page_id = op.vaddr/(ssd_count-parity_count)
+	int page_id = op.vaddr/(ssd_count-parity_count);
 	int stripe_id = page_id/pages_per_sblock;
     int tranlated_addr = page_id; 
 	uint logical_block = (op.vaddr%(ssd_count-parity_count));
@@ -66,10 +70,10 @@ virtual double DiffRaid::event_arrive( const TraceRecord& op ){
     if( op.op == 'w' ){
         check_erasure_and_swap_ssd( opSize, ssd_ids, 1 + parity_count, op.arrive_time );
         ssd_writes[ssd_ids[0]] += (double)opSize;
-        if(num_writes.find(stripe_id) != num_writes.end){
+        if(num_writes.find(stripe_id) != num_writes.end()){
             num_writes[stripe_id][ssd_ids[0]] += (double)opSize;
         } else{
-            num_writes[stripe_id] = new std::vector<double>(ssd_count, 0);
+            num_writes[stripe_id] = std::vector<double>(ssd_count,0);
             num_writes[stripe_id][ssd_ids[0]] += (double)opSize;
         }
         //record the parity right
@@ -80,19 +84,19 @@ virtual double DiffRaid::event_arrive( const TraceRecord& op ){
         
     } else if( op.op == 'r' ){
         ssd_reads[ssd_ids[0]] += (double)opSize;
-        if(num_reads.find(stripe_id) != num_reads.end){
+        if(num_reads.find(stripe_id) != num_reads.end()){
             num_reads[stripe_id][ssd_ids[0]] += (double)opSize;
         } else{
-            num_reads[stripe_id] = new std::vector<double>(ssd_count,0);
+            num_reads[stripe_id] = std::vector<double>(ssd_count,0);
             num_reads[stripe_id][ssd_ids[0]] = (double)opSize;
         }
     }
 
     double time = 0,single_time;
     for( int i = 0; i < 1 + parity_count; i ++ ){
-        single_time = 
+        single_time = raid_ssd.Ssds[ssd_ids[i]].event_arrive(op.op == 'r'?READ:WRITE, tranlated_addr, 1, op.arrive_time);
         if( time < single_time ){
-            time = raid_ssd.Ssds[ssd_ids[i]].event_arrive(op.op == 'r'?READ:WRITE, tranlated_addr, 1, op.arrive_time);
+            time = single_time;
         }
     }
     return time;
@@ -132,10 +136,10 @@ void DiffRaid::swap_ssd( uint ssd_id, double time ) {
 
 	erasure_left[ssd_id] -= temp_m.size;
 
-    adjust_parity_distribution(ssd_id, time);
+    adjust_parity_distribution(ssd_id, time, size);
 }
 
-void DiffRaid::adjust_parity_distribution( uint ssd_id, double time ){
+void DiffRaid::adjust_parity_distribution( uint ssd_id, double time, double size ){
     int min_id = 0;
     int min = parity_dis[0];
     int next_ssd = (ssd_id + 1) % ssd_count;
@@ -161,7 +165,7 @@ void DiffRaid::adjust_parity_distribution( uint ssd_id, double time ){
         int need = parity_dis[ssd_id] - parity_dis[next_ssd];
         int need_min = parity_dis[next_ssd] - parity_dis[min_id];
         assert(need > 0);
-        assert(need_min > =0);
+        assert(need_min >= 0);
         for( int i = 0; i < stripe_count; i ++ ){
             if( smap[i][ssd_count - 1] == ssd_id ){
                 if( moved < need ){
@@ -170,7 +174,7 @@ void DiffRaid::adjust_parity_distribution( uint ssd_id, double time ){
                     }
                     moved ++;
                 } else if( moved < need + need_min ){
-                    temp = min_id < ssd_id? min_id + ssd_count - ssd_id; min_id - ssd_id;
+                    temp = min_id < ssd_id? min_id + ssd_count - ssd_id : min_id - ssd_id;
                     for( int j = 0; j < ssd_count; j ++ ){
                         smap[i][j] = (smap[i][j] + temp) % ssd_count;     
                     }
@@ -206,14 +210,10 @@ void DiffRaid::adjust_parity_distribution( uint ssd_id, double time ){
         int need = parity_dis[ssd_id] - parity_dis[next_ssd];
         int need_min = parity_dis[next_ssd] - parity_dis[min_id];
         assert(need > 0);
-        assert(need_min > =0);
+        assert(need_min >= 0);
 
         int next_logic_id = 0, min_logic_id = 0;
-        for( int p = 0; p < ssd_count; p ++ ){
-            if(smap[i][p] == next_ssd){
-                next_logic_id = p;
-            }
-        }
+
         for( int i = 0; i < stripe_count; i ++ ){
             if( smap[i][ssd_count - 1] == ssd_id ){
                 if( moved < need ){
@@ -222,7 +222,7 @@ void DiffRaid::adjust_parity_distribution( uint ssd_id, double time ){
                             next_logic_id = p;
                         }
                     }
-                    swap( smap[i][ssd_count - 1], smap[i][next_logic_id] );
+                    std::swap( smap[i][ssd_count - 1], smap[i][next_logic_id] );
                     moved ++;
                 } else if( moved < need + need_min ){
                     for( int p = 0; p < ssd_count; p ++ ){
@@ -230,7 +230,7 @@ void DiffRaid::adjust_parity_distribution( uint ssd_id, double time ){
                             min_logic_id = p;
                         }
                     }
-                    swap( smap[i][ssd_count - 1], smap[i][min_logic_id] );
+                    std::swap( smap[i][ssd_count - 1], smap[i][min_logic_id] );
                     moved ++;
                 }
             }
@@ -267,10 +267,10 @@ void DiffRaid::adjust_parity_distribution( uint ssd_id, double time ){
     }
 
     //update dis
-    temp = parity_dis[next_ssd];
+    ulong temp = parity_dis[next_ssd];
     parity_dis[next_ssd] = parity_dis[ssd_id];
     parity_dis[ssd_id] = min;
-    if( min_id != next_id ){
+    if( min_id != next_ssd ){
         parity_dis[min_id] =temp;
     }
 }

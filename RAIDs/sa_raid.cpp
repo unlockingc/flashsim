@@ -4,7 +4,9 @@
 #include "ssd.h"
 #include <algorithm> 
 
-SaRaid::SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_, uint pages_per_sblock_, double time_thre_, double max_mig_, double diff_percent, double var_thre_, bool read_opt_):\
+using namespace ssd;
+
+SaRaid::SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_, uint pages_per_sblock_, double time_thre_, double max_mig_, double diff_percent_, double var_thre_, bool read_opt_):\
 RaidParent( ssd_count_, pages_per_ssd_, parity_count_, ssd_erasures_, pages_per_sblock_  ), time_thre(time_thre_), last_rtime(0), diff_erasures(ssd_count_, 0),\
 max_mig(max_mig_),diff_percent(diff_percent_),var_thre(var_thre_), read_opt(read_opt_)
 {
@@ -20,23 +22,23 @@ max_mig(max_mig_),diff_percent(diff_percent_),var_thre(var_thre_), read_opt(read
     init();
 }
 
-virtual SaRaid::init_map(){
+void SaRaid::init_map(){
     int temp1 = 0;
     int temp2 = 0;
-    for( uint i = 0; i < stripe_count, i++ ){
+    for( uint i = 0; i < stripe_count; i++ ){
         for( uint j = 0; j < ssd_count; j ++ ){
             smap[i][j] = (i + j)%ssd_count;
         }
     }
 }
 
-virtual double SaRaid::event_arrive( const TraceRecord& op ){
+double SaRaid::event_arrive( const TraceRecord& op ){
     check_reblance(op);
 
     
     //calculate tranlated addr and blocks need to be operated
     uint ssd_ids[1 + parity_count];
-	int page_id = op.vaddr/(ssd_count-parity_count)
+	int page_id = op.vaddr/(ssd_count-parity_count);
 	int stripe_id = page_id/pages_per_sblock;
     int tranlated_addr = page_id; 
 	uint logical_block = (op.vaddr%(ssd_count-parity_count));
@@ -54,10 +56,10 @@ virtual double SaRaid::event_arrive( const TraceRecord& op ){
         check_erasure_and_swap_ssd( opSize, ssd_ids, 1 + parity_count, op.arrive_time );
         ssd_writes[ssd_ids[0]] += (double)opSize;
         erasure_left[ssd_ids[0]] -= 1;
-        if(num_writes.find(stripe_id) != num_writes.end){
+        if(num_writes.find(stripe_id) != num_writes.end()){
             num_writes[stripe_id][ssd_ids[0]] += (double)opSize;
         } else{
-            num_writes[stripe_id] = new std::vector<double>(ssd_count, 0);
+            num_writes[stripe_id] = std::vector<double>(ssd_count, 0);
             num_writes[stripe_id][ssd_ids[0]] += (double)opSize;
         }
         //record the parity right
@@ -69,10 +71,10 @@ virtual double SaRaid::event_arrive( const TraceRecord& op ){
         
     } else if( op.op == 'r' ){
         ssd_reads[ssd_ids[0]] += (double)opSize;
-        if(num_reads.find(stripe_id) != num_reads.end){
+        if(num_reads.find(stripe_id) != num_reads.end()){
             num_reads[stripe_id][ssd_ids[0]] += (double)opSize;
         } else{
-            num_reads[stripe_id] = new std::vector<double>(ssd_count,0);
+            num_reads[stripe_id] = std::vector<double>(ssd_count,0);
             num_reads[stripe_id][ssd_ids[0]] = (double)opSize;
         }
     }
@@ -90,14 +92,14 @@ virtual double SaRaid::event_arrive( const TraceRecord& op ){
 struct Stripe_oc{
     uint id;
     ulong val;
-    Stripe_oc():val(0){}
-    Strope_oc( uint id_, ulong val_ ):id(id_), val(val_){} 
-
-    bool operator < (Stripe_oc const & a, Stripe_oc const & b)
-    {
-        return a.val < b.val;
-    }
+    Stripe_oc():id(0),val(0){}
+    Stripe_oc( uint id_, ulong val_ ):id(id_), val(val_){} 
 };
+
+bool operator < (Stripe_oc const & a, Stripe_oc const & b)
+{
+    return a.val < b.val;
+}
 
 struct Read_pair{
     uint id;
@@ -105,12 +107,12 @@ struct Read_pair{
     ulong val;
     Read_pair():val(0){}
     Read_pair( uint id_, uint ssd1_, uint ssd2_, ulong val_ ):id(id_),ssd1(ssd1_), ssd2(ssd2_),val(val_){} 
-
-    bool operator < (Read_pair const & a, Read_pair const & b)
-    {
-        return a.val < b.val;
-    }
 };
+
+bool operator < (Read_pair const & a, Read_pair const & b)
+{
+    return a.val < b.val;
+}
 
 double sigmod( double x ){
     return x/(1 + abs(x));
@@ -127,7 +129,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
     if( need_reblance(op) ){
         //写均衡
         double aim[ssd_count];
-        double needed[ssd_count];
+        double need[ssd_count];
         double rebalanced[ssd_count];
         double mean = 0;
         double total_need = 0;
@@ -141,7 +143,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
             aim[i] = mean + diff_erasures[i];
             need[i] = aim[i] - erasure_left[i];
             total_need += (need[i] > 0)?need[i]:0;
-            var += ((erasure_left[i] - aim[i])/ssd_erasures_) * ((erasure_left[i] - aim[i])/ssd_erasures_);
+            var += ((erasure_left[i] - aim[i])/ssd_erasures) * ((erasure_left[i] - aim[i])/ssd_erasures);
         }
     
         var = var / ssd_count;
@@ -157,7 +159,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
             stripe_rank.push_back(temp);
         }
 
-        sort( stripe_rank.begin(), stripe_rank.end() );
+        std::sort( stripe_rank.begin(), stripe_rank.end() );
 
         std::vector<Stripe_oc> stripe_selected;
         stripe_selected.clear();
@@ -165,7 +167,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
         double total_weight = 0;
         for( int i = stripe_rank.size()-1; i >= 0; i-- ){
             //todo: ensure that parity_count > 1 work
-            if(needed[map[stripe_rank[i].id][parity_count-1]] > 0){
+            if(need[smap[stripe_rank[i].id][parity_count-1]] > 0){
                 stripe_selected.push_back(stripe_rank[i]);
                 total_weight +=stripe_rank[i].val;
 
@@ -208,7 +210,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
             smap[stripe_selected[i].id][parity_count-1] = a;
             
             rebalanced[a] += stripe_selected[i].val;
-            if( reblanced[a] >= 0 ){
+            if( rebalanced[a] >= 0 ){
                 while( rebalanced[a] >= 0 && a < ssd_count ){
                     a ++;
                 }
@@ -221,7 +223,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
             read_rank.clear();
             std::map<uint, std::vector<double>>::iterator it;
             uint max_id, min_id;
-            ulong max = 0; min = 0;
+            ulong max = 0, min = 0;
             for(it=num_reads.begin();it!=num_reads.end();++it){
                 min = it->second[0];
                 max = it->second[0];
@@ -242,50 +244,50 @@ void SaRaid::check_reblance(const TraceRecord& op){
                     read_rank.push_back(temp);
                 }
             }
-        }
+        
 
-        sort( read_rank.begin(),read_rank.end() );
+            std::sort( read_rank.begin(),read_rank.end() );
 
-        int miged = 0;
+            int miged = 0;
 
-        double read_mean = 0;
-        double read_need[ssd_count];
-        for( int i = 0; i < ssd_count; i++ ){
-            read_mean += ssd_reads[i];
-        }
-        read_mean = read_mean/ssd_count;
+            double read_mean = 0;
+            double read_need[ssd_count];
+            for( int i = 0; i < ssd_count; i++ ){
+                read_mean += ssd_reads[i];
+            }
+            read_mean = read_mean/ssd_count;
 
-        for( int i = 0; i < ssd_count; i++ ){
-            need[i] = ssd_reads[i] - read_mean;
-        }
-
-        for( int i = read_rank.size()-1; i>=0; i -- ){
-            if(miged >= max_mig){
-                break;
+            for( int i = 0; i < ssd_count; i++ ){
+                need[i] = ssd_reads[i] - read_mean;
             }
 
-            if( need[read_rank[i].ssd1] > 0 && need[read_rank[i].ssd2] < 0 ){
-
-                for( int k = 0; k < ssd_count; k ++ ){
-                    if( smap[read_rank[i].id][k] == read_rank[i].ssd1 ){
-                        smap[read_rank[i].id][k] = read_rank[i].ssd2;
-                    }
-
-                    if( smap[read_rank[i].id][k] == read_rank[i].ssd2 ){
-                        smap[read_rank[i].id][k] = read_rank[i].ssd1;
-                    }
+            for( int i = read_rank.size()-1; i>=0; i -- ){
+                if(miged >= max_mig){
+                    break;
                 }
 
-                for( int j = 0; j < pages_per_sblock; i ++)
-                {
-                    raid_ssd.Ssds[read_rank[i].ssd1].event_arrive(READ, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
-                    raid_ssd.Ssds[read_rank[i].ssd2].event_arrive(WRITE, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
-                    raid_ssd.Ssds[read_rank[i].ssd2].event_arrive(READ, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
-                    raid_ssd.Ssds[read_rank[i].ssd1].event_arrive(WRITE, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
+                if( need[read_rank[i].ssd1] > 0 && need[read_rank[i].ssd2] < 0 ){
+
+                    for( int k = 0; k < ssd_count; k ++ ){
+                        if( smap[read_rank[i].id][k] == read_rank[i].ssd1 ){
+                            smap[read_rank[i].id][k] = read_rank[i].ssd2;
+                        }
+
+                        if( smap[read_rank[i].id][k] == read_rank[i].ssd2 ){
+                            smap[read_rank[i].id][k] = read_rank[i].ssd1;
+                        }
+                    }
+
+                    for( int j = 0; j < pages_per_sblock; i ++)
+                    {
+                        raid_ssd.Ssds[read_rank[i].ssd1].event_arrive(READ, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
+                        raid_ssd.Ssds[read_rank[i].ssd2].event_arrive(WRITE, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
+                        raid_ssd.Ssds[read_rank[i].ssd2].event_arrive(READ, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
+                        raid_ssd.Ssds[read_rank[i].ssd1].event_arrive(WRITE, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
+                    }
                 }
             }
         }
-
         //clean data
         num_writes.clear();
         num_reads.clear();

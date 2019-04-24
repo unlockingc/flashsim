@@ -5,6 +5,7 @@
 #include <string.h>
 
 using namespace ssd;
+using namespace std;
 
 int main(int argc, char **argv){
     if( argc != 3 ){
@@ -31,7 +32,12 @@ int main(int argc, char **argv){
     } else if( raid_type == "wlRaid" ){
         raid = new WlRaid(RAID_NUMBER_OF_PHYSICAL_SSDS, pages_per_ssd, 1 );
     } else if( raid_type == "diffRaid" ){
-        raid = new DiffRaid(RAID_NUMBER_OF_PHYSICAL_SSDS, pages_per_ssd, 1 );
+        vector<uint> parity_dis(RAID_NUMBER_OF_PHYSICAL_SSDS,0);
+        for( int i = 0; i < RAID_NUMBER_OF_PHYSICAL_SSDS; i++ ){
+            parity_dis[i] = 15;
+        }
+        parity_dis[0] = 40;
+        raid = new DiffRaid(parity_dis,RAID_NUMBER_OF_PHYSICAL_SSDS, pages_per_ssd, 1 );
     } else {
         fprintf(stderr, "error raid type %s\nsupport types are:\n\traid5\n\traid6\n\tsaRaid\n\twlRaid\n\tdiffRaid \n\n", raid_type.c_str());
         exit(1);
@@ -51,8 +57,8 @@ int main(int argc, char **argv){
     // printf("Avg read time : %5.20lf\n", read_total / num_reads);
     // printf("Avg write time: %5.20lf\n", write_total / num_writes);
 
-    raid->raid_ssd->print_statistics();
-    ssd->raid_ssd_ftl_statistics();
+    raid->raid_ssd.print_statistics();
+    raid->raid_ssd.print_ftl_statistics();
 
 
     delete raid;

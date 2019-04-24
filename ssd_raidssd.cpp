@@ -125,3 +125,24 @@ void *RaidSsd::get_result_buffer()
 {
 	return global_buffer;
 }
+
+void RaidSsd::print_statistics()
+{
+	for (uint i=0;i<RAID_NUMBER_OF_PHYSICAL_SSDS;i++)
+		{
+			printf ("%u %s",i, " th SSD \n");
+			Ssds[i].print_statistics();
+		}
+
+
+}
+
+void RaidSsd::print_ftl_statistics()
+{
+	for (uint i=0;i<RAID_NUMBER_OF_PHYSICAL_SSDS;i++)
+		{
+			printf ("%u %s",i, " th SSD \n");
+			Ssds[i].print_ftl_statistics();
+
+		}
+}

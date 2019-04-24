@@ -4,7 +4,9 @@
 #include "ssd.h"
 #include <algorithm> 
 
-WlRaid::WlRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1, double var_thre_ = 1.0):\
+using namespace ssd;
+
+WlRaid::WlRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_, uint pages_per_sblock_, double var_thre_):\
 RaidParent( ssd_count_, pages_per_ssd_, parity_count_, ssd_erasures_, pages_per_sblock_  ),\
 var_thre(var_thre_),erasure_used(ssd_count_,0),last_parity_dis(ssd_count, 1)
 {
@@ -13,14 +15,14 @@ var_thre(var_thre_),erasure_used(ssd_count_,0),last_parity_dis(ssd_count, 1)
     last_parity_loop = ssd_count;
     for( int i = 0; i < ssd_count; i ++ ){
         last_parity_dis[i] = 1;
-    }　
+    }
     init();
 }
 
-virtual void WlRaid::init_map(){
+void WlRaid::init_map(){
     int temp1 = 0;
     int temp2 = 0;
-    for( uint i = 0; i < stripe_count, i++ ){
+    for( uint i = 0; i < stripe_count; i++ ){
         for( uint j = 0; j < ssd_count; j ++ ){
             smap[i][j] = (i + j)%ssd_count;
         }
@@ -43,7 +45,7 @@ void WlRaid::redis_map( std::vector<ulong> new_parity_dis ){
     int p = 0;
     int current = 0;
 
-    for( uint i = 0; i < stripe_count, i++ ){
+    for( uint i = 0; i < stripe_count; i++ ){
         smap[i][ssd_count - 1] = current;
 
         for( uint j = 0; j < ssd_count; j ++ ){
@@ -61,13 +63,13 @@ void WlRaid::redis_map( std::vector<ulong> new_parity_dis ){
     }
 }
 
-virtual double WlRaid::event_arrive( const TraceRecord& op ){
+double WlRaid::event_arrive( const TraceRecord& op ){
     check_reblance(op);
 
     
     //calculate tranlated addr and blocks need to be operated
     uint ssd_ids[1 + parity_count];
-	int page_id = op.vaddr/(ssd_count-parity_count)
+	int page_id = op.vaddr/(ssd_count-parity_count);
 	int stripe_id = page_id/pages_per_sblock;
     int tranlated_addr = page_id; 
 	uint logical_block = (op.vaddr%(ssd_count-parity_count));
@@ -85,10 +87,10 @@ virtual double WlRaid::event_arrive( const TraceRecord& op ){
         check_erasure_and_swap_ssd( opSize, ssd_ids, 1 + parity_count, op.arrive_time );
         ssd_writes[ssd_ids[0]] += (double)opSize;
         erasure_left[ssd_ids[0]] -= 1;
-        if(num_writes.find(stripe_id) != num_writes.end){
+        if(num_writes.find(stripe_id) != num_writes.end()){
             num_writes[stripe_id][ssd_ids[0]] += (double)opSize;
         } else{
-            num_writes[stripe_id] = new std::vector<double>(ssd_count, 0);
+            num_writes[stripe_id] = std::vector<double>(ssd_count, 0);
             num_writes[stripe_id][ssd_ids[0]] += (double)opSize;
         }
         //record the parity right
@@ -100,10 +102,10 @@ virtual double WlRaid::event_arrive( const TraceRecord& op ){
         
     } else if( op.op == 'r' ){
         ssd_reads[ssd_ids[0]] += (double)opSize;
-        if(num_reads.find(stripe_id) != num_reads.end){
+        if(num_reads.find(stripe_id) != num_reads.end()){
             num_reads[stripe_id][ssd_ids[0]] += (double)opSize;
         } else{
-            num_reads[stripe_id] = new std::vector<double>(ssd_count,0);
+            num_reads[stripe_id] = std::vector<double>(ssd_count,0);
             num_reads[stripe_id][ssd_ids[0]] = (double)opSize;
         }
     }
@@ -120,12 +122,12 @@ virtual double WlRaid::event_arrive( const TraceRecord& op ){
 
 ulong GetCommonN(ulong num1, ulong num2)
 {
-    if (num1 < num2)swap(num1, num2);
+    if (num1 < num2) std:: swap(num1, num2);
     if (num1%num2 == 0)return num2;
     return GetCommonN(num2, num1%num2);
 }
 ulong lcm( ulong n, ulong m ){
-    return n*m / GetCommonN(m, n)
+    return n*m / GetCommonN(m, n);
 }
 
 void WlRaid::check_reblance(const TraceRecord& op){
@@ -160,13 +162,13 @@ void WlRaid::check_reblance(const TraceRecord& op){
         ulong moved[ssd_count];
         for( int i = 0; i < ssd_count; i++ ){
             moved[i] = last_parity_dis[i]*a1 - parity_dis[i]*b1;
-            if( temp_mig > 0 ){
+            if( moved[i] > 0 ){
                 miged_per_loop += moved[i];
             }
         }
 
         int loops = stripe_count / parity_lcm + ( stripe_count / parity_lcm != 0 );
-        ulong total_miged = mig_per_loop *( loops );
+        ulong total_miged = miged_per_loop *( loops );
                 
 
 
@@ -184,7 +186,7 @@ void WlRaid::check_reblance(const TraceRecord& op){
             }
         }
 
-        redis_map( std::vector<ulong> parity_dis );
+        redis_map( parity_dis );
 
         last_parity_loop = new_parity_loop;
     }
