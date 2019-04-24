@@ -62,6 +62,7 @@ Ssd::Ssd(uint ssd_size):
 	/* assume hardware created at time 0 and had an implied free erasure */
 	last_erase_time(0.0)
 {
+	printf("\n*** SSD created*** \n");
 	uint i;
 
 	/* new cannot initialize an array with constructor args so

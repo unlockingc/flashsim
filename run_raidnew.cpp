@@ -43,23 +43,28 @@ int main(int argc, char **argv){
         exit(1);
     }
     
+    double read_total = 0, write_total = 0;
+    double num_reads = 0, num_writes = 0;
+
+
+    printf("test start************************************************************\n");
     TraceRecord op;
-    while( trace_reader.read_next(op) ){
-        raid->event_arrive(op);
+    while( trace_reader.read_next(op) && (op.op == 'r' || op.op == 'w' )){
+        (op.op == 'r'? read_total: write_total) +=raid->event_arrive(op);
+        (op.op == 'r'? num_reads: num_writes) += ( op.size/4096 + (op.size%4096!=0) );
     }
 
     
+    printf("test end**************************************************************\n");
+    printf("Num reads : %lu\n", num_reads);
+    printf("Num writes: %lu\n", num_writes);
 
-    //printf("Num reads : %lu\n", num_reads);
-    //printf("Num writes: %lu\n", num_writes);
-
-    // printf("Total Write time :  %5.20lf\n", write_total);
-    // printf("Avg read time : %5.20lf\n", read_total / num_reads);
-    // printf("Avg write time: %5.20lf\n", write_total / num_writes);
+    printf("Total Write time :  %5.20lf\n", write_total);
+    printf("Avg read time : %5.20lf\n", read_total / num_reads);
+    printf("Avg write time: %5.20lf\n", write_total / num_writes);
 
     raid->raid_ssd.print_statistics();
-    raid->raid_ssd.print_ftl_statistics();
-
+    // raid->raid_ssd.print_ftl_statistics();
 
     delete raid;
     return 0;

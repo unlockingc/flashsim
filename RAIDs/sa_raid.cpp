@@ -14,9 +14,11 @@ max_mig(max_mig_),diff_percent(diff_percent_),var_thre(var_thre_), read_opt(read
     assert(parity_count == 1);
 
     double diff_step = ssd_erasures * diff_percent;
-    uint mid = ssd_count / 2;
+    int mid = ssd_count / 2;
+    diff_erasures[0] = -4000;
     for( int i = 0; i < ssd_count; i++ ){
-        diff_erasures[i] = diff_step*( i - mid);
+        double temp = i - mid;
+        diff_erasures[i] = diff_step*temp;
     }
 
     init();
@@ -32,62 +34,63 @@ void SaRaid::init_map(){
     }
 }
 
-double SaRaid::event_arrive( const TraceRecord& op ){
-    check_reblance(op);
+// double SaRaid::event_arrive( const TraceRecord& op ){
+//     check_reblance(op);
 
     
-    //calculate tranlated addr and blocks need to be operated
-    uint ssd_ids[1 + parity_count];
-	int page_id = op.vaddr/(ssd_count-parity_count);
-	int stripe_id = page_id/pages_per_sblock;
-    int tranlated_addr = page_id; 
-	uint logical_block = (op.vaddr%(ssd_count-parity_count));
-	ssd_ids[0]= smap[stripe_id][logical_block];
+//     //calculate tranlated addr and blocks need to be operated
+//     uint ssd_ids[1 + parity_count];
+// 	int page_id = op.vaddr/(ssd_count-parity_count);
+// 	int stripe_id = page_id/pages_per_sblock;
+//     int tranlated_addr = page_id; 
+// 	uint logical_block = (op.vaddr%(ssd_count-parity_count));
+// 	ssd_ids[0]= smap[stripe_id][logical_block];
 	
-    for( int i = 0; i < parity_count; i ++ ){
-		ssd_ids[i + 1] = smap[stripe_id][ssd_count-(i+1)];
-	}
+//     for( int i = 0; i < parity_count; i ++ ){
+// 		ssd_ids[i + 1] = smap[stripe_id][ssd_count-(i+1)];
+// 	}
 
-    int opSize = op.size/4096 + (op.size%4096 == 0?0:1); //write or read the whole block
+//     int opSize = op.size/4096 + (op.size%4096 == 0?0:1); //write or read the whole block
     
     
-    //record data todo:figure out count as pages or bits
-    if( op.op == 'w' ){
-        check_erasure_and_swap_ssd( opSize, ssd_ids, 1 + parity_count, op.arrive_time );
-        ssd_writes[ssd_ids[0]] += (double)opSize;
-        erasure_left[ssd_ids[0]] -= 1;
-        if(num_writes.find(stripe_id) != num_writes.end()){
-            num_writes[stripe_id][ssd_ids[0]] += (double)opSize;
-        } else{
-            num_writes[stripe_id] = std::vector<double>(ssd_count, 0);
-            num_writes[stripe_id][ssd_ids[0]] += (double)opSize;
-        }
-        //record the parity right
-        for( int i = 0; i < parity_count; i ++ ){
-            erasure_left[ssd_ids[i + 1]] -= 1;
-            ssd_writes[ssd_ids[i + 1]] += (double)opSize;
-            num_writes[stripe_id][ssd_ids[i + 1]];
-        }
+//     //record data todo:figure out count as pages or bits
+//     if( op.op == 'w' ){
+//         check_erasure_and_swap_ssd( opSize, ssd_ids, 1 + parity_count, op.arrive_time );
+//         ssd_writes[ssd_ids[0]] += (double)opSize;
+//         erasure_left[ssd_ids[0]] -= 1;
+//         if(num_writes.find(stripe_id) != num_writes.end()){
+//             num_writes[stripe_id][ssd_ids[0]] += (double)opSize;
+//         } else{
+//             num_writes[stripe_id] = std::vector<double>(ssd_count, 0);
+//             num_writes[stripe_id][ssd_ids[0]] += (double)opSize;
+//         }
+//         //record the parity right
+//         for( int i = 0; i < parity_count; i ++ ){
+//             erasure_left[ssd_ids[i + 1]] -= 1;
+//             ssd_writes[ssd_ids[i + 1]] += (double)opSize;
+//             num_writes[stripe_id][ssd_ids[i + 1]];
+//         }
         
-    } else if( op.op == 'r' ){
-        ssd_reads[ssd_ids[0]] += (double)opSize;
-        if(num_reads.find(stripe_id) != num_reads.end()){
-            num_reads[stripe_id][ssd_ids[0]] += (double)opSize;
-        } else{
-            num_reads[stripe_id] = std::vector<double>(ssd_count,0);
-            num_reads[stripe_id][ssd_ids[0]] = (double)opSize;
-        }
-    }
+//     } else if( op.op == 'r' ){
+//         ssd_reads[ssd_ids[0]] += (double)opSize;
+//         if(num_reads.find(stripe_id) != num_reads.end()){
+//             num_reads[stripe_id][ssd_ids[0]] += (double)opSize;
+//         } else{
+//             num_reads[stripe_id] = std::vector<double>(ssd_count,0);
+//             num_reads[stripe_id][ssd_ids[0]] = (double)opSize;
+//         }
+//     }
 
-    double time = 0,single_time;
-    for( int i = 0; i < 1 + parity_count; i ++ ){
-        single_time = raid_ssd.Ssds[ssd_ids[i]].event_arrive(op.op == 'r'?READ:WRITE, tranlated_addr, 1, op.arrive_time);
-        if( time < single_time ){
-            time = single_time;
-        }
-    }
-    return time;
-}
+//     double time = 0,single_time;
+//     for( int i = 0; i < 1 + parity_count; i ++ ){
+//         single_time = raid_ssd.Ssds[ssd_ids[i]].event_arrive(op.op == 'r'?READ:WRITE, tranlated_addr, 1, op.arrive_time);
+//         if( time < single_time ){
+//             time = single_time;
+//         }
+//     }
+//     return time;
+//}
+
 
 struct Stripe_oc{
     uint id;
@@ -136,7 +139,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
         for( int i = 0; i < ssd_count; i ++ ){
             mean += erasure_left[i];
         }
-        mean = mean / ssd_count;
+        mean = mean / (double)ssd_count;
 
         double var = 0;
         for( int i = 0; i < ssd_count; i ++ ){
@@ -312,3 +315,35 @@ bool SaRaid::need_reblance(const TraceRecord& op){
     return false;
 }
 
+void SaRaid::print_ssd_erasures( FILE* stream ){
+    double mean = 0;
+    for( int i = 0; i < ssd_count; i++ ){
+        mean += erasure_left[i];
+        fprintf(stream, "%lf,", erasure_left[i]);
+    }
+
+    mean /= (double) ssd_count;
+    
+
+    double var = 0;
+    double aim[ssd_count];
+    for( int i = 0; i < ssd_count; i ++ ) { 
+        aim[i] = mean + diff_erasures[i];
+        var += ((erasure_left[i] - aim[i])/ssd_erasures) * ((erasure_left[i] - aim[i])/ssd_erasures);
+    }
+
+    var = var / ssd_count;
+    fprintf(stream, "0,%lf,%lf\n", mean, var);
+
+    for( int i = 0; i < ssd_count; i++ ){
+        fprintf(stream, "%lf,", aim[i]);
+    }
+    fprintf(stream, "0,%lf,%lf\n", mean, var);
+}
+
+void SaRaid::check_and_print_stat( const TraceRecord& op,FILE* stream ){
+	if( need_print( op ) ){
+        print_ssd_erasures( stream );
+		raid_ssd.write_statistics(stream);
+	}
+}

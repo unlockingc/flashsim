@@ -25,7 +25,7 @@ endef
 $(foreach prog,$(PROGRAMS),$(eval $(call PROGRAM_TEMPLATE,$(prog))))
 
 clean:
-	-rm -rf *.o FTLs/*.o $(PROGRAMS)
+	-rm -rf *.o FTLs/*.o RAIDs/*.o $(PROGRAMS)
 
 .PHONY: files
 files:

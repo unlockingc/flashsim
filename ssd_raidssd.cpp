@@ -129,19 +129,38 @@ void *RaidSsd::get_result_buffer()
 void RaidSsd::print_statistics()
 {
 	for (uint i=0;i<RAID_NUMBER_OF_PHYSICAL_SSDS;i++)
-		{
-			printf ("%u %s",i, " th SSD \n");
-			Ssds[i].print_statistics();
-		}
+	{
+		printf ("%u %s",i, " th SSD \n");
+		Ssds[i].print_statistics();
+	}
 
 
+}
+
+void RaidSsd::write_statistics(FILE* stream)
+{
+	for (uint i=0;i<RAID_NUMBER_OF_PHYSICAL_SSDS;i++)
+	{
+		fprintf(stream, "%d,",i);
+		Ssds[i].write_statistics(stream);
+	}
+}
+
+
+
+void RaidSsd::reset_statistics(){
+	for (uint i=0;i<RAID_NUMBER_OF_PHYSICAL_SSDS;i++)
+	{
+		printf ("%u %s",i, " th SSD \n");
+		Ssds[i].reset_statistics();
+	}
 }
 
 void RaidSsd::print_ftl_statistics()
 {
 	for (uint i=0;i<RAID_NUMBER_OF_PHYSICAL_SSDS;i++)
 		{
-			printf ("%u %s",i, " th SSD \n");
+			printf ("%u %s",i, " th SSD FTL \n");
 			Ssds[i].print_ftl_statistics();
 
 		}

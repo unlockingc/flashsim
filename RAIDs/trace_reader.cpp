@@ -8,13 +8,12 @@
 using namespace ssd;
 
 TraceReader::TraceReader( std::string filename_, ulong device_size_ ):device_size(device_size_),filename(filename_),line_now(0){
-    FILE *trace = NULL;
-    if((trace = fopen( filename.c_str(), "r")) == NULL){
+    if((trace_file = fopen( filename.c_str(), "r")) == NULL){
         fprintf(stderr,"Please provide trace file name\n");
         exit(-1);
     }
 
-    fseek(trace, 0, SEEK_SET);
+    fseek(trace_file, 0, SEEK_SET);
     printf("open trace file %s succeed\n", filename.c_str());
 }
 

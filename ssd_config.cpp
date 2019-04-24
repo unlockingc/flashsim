@@ -170,7 +170,7 @@ uint VIRTUAL_PAGE_SIZE = 1;
 uint NUMBER_OF_ADDRESSABLE_BLOCKS = 0;
 
 /* RAISSDs: Number of physical SSDs */
-uint RAID_NUMBER_OF_PHYSICAL_SSDS = 0;
+uint RAID_NUMBER_OF_PHYSICAL_SSDS = 5;
 
 void load_entry(char *name, double value, uint line_number) {
 	/* cheap implementation - go through all possibilities and match entry */
@@ -232,13 +232,14 @@ void load_entry(char *name, double value, uint line_number) {
 		VIRTUAL_PAGE_SIZE = value;
 	else if (!strcmp(name, "RAID_NUMBER_OF_PHYSICAL_SSDS"))
 		RAID_NUMBER_OF_PHYSICAL_SSDS = value;
-	else
-		fprintf(stderr, "Config file parsing error on line %u\n", line_number);
+	else{
+		fprintf(stderr, "Config file parsing error on line %u------%s:%lf\n", line_number, name,value);
+	}
 	return;
 }
 
 void load_config(void) {
-	const char * const config_name = "ssd.conf.testing";
+	const char * const config_name = "ssd_mini.conf";
 	FILE *config_file = NULL;
 
 	/* update sscanf line below with max name length (%s) if changing sizes */
@@ -266,7 +267,7 @@ void load_config(void) {
 			name[line_size - 1] = '\0';
 			load_entry(name, value, line_number);
 		} else
-			fprintf(stderr, "Config file parsing error on line %u\n",
+			fprintf(stderr, "Config file read error on line %u\n",
 					line_number);
 	}
 	fclose(config_file);

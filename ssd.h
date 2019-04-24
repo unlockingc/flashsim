@@ -28,6 +28,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <vector>
+#include <iostream>
+#include <fstream>
 #include <queue>
 #include <map>
 #include <boost/multi_index_container.hpp>
@@ -1131,6 +1133,7 @@ class RaidParent{
 		uint parity_count;
 		bool ssd_record;
 		double ssd_erasures;
+		double last_print_time;
 		
 		RaidSsd raid_ssd;
 		std::vector<std::vector<uint>> smap; //the map[i][j] means the logical block id of i stripe's j ssd
@@ -1143,25 +1146,36 @@ class RaidParent{
 		std::vector<MigrationRecord> migrations;
 		
 		RaidParent( uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures = 40000, uint pages_per_sblock_ = 1 );
-		virtual double event_arrive( const TraceRecord& op );
-		virtual void init_map();
-
+		double event_arrive( const TraceRecord& op );
 		void init();
 		void check_erasure_and_swap_ssd( int opSize, uint* ssd_ids, int num, double time );
+		
+		
+		virtual void init_map();
 		virtual void swap_ssd( uint ssd_id, double time );
+		virtual void check_and_print_stat( const TraceRecord& op, FILE *stream );
+		virtual bool need_print( const TraceRecord& op );
+		virtual void check_reblance(const TraceRecord& op);
+		virtual void print_migrate_data( uint start, uint end, FILE* stream);
+		
 };
 
 class SaRaid:public RaidParent{
 	public:
-		double last_rtime,time_thre,diff_percent_,max_mig,var_thre,diff_percent;
+		double last_rtime,time_thre,max_mig,var_thre,diff_percent;
 		bool read_opt;
 		std::vector<double> diff_erasures;
 		SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1,double time_thre_ = 600, double max_mig_ = 400*1024, double diff_percent_ = 0.05,double var_thre_ = 0.0003, bool read_opt_ = false );
-		void check_reblance(const TraceRecord& op);
+		
 		uint get_migrate_blocks_for_write( double var );
 		bool need_reblance(const TraceRecord& op);
-		virtual double event_arrive( const TraceRecord& op );
+		void print_ssd_erasures( FILE* stream );
+
+		//virtual double event_arrive( const TraceRecord& op );
 		virtual void init_map();
+		virtual void check_reblance(const TraceRecord& op);
+		virtual void check_and_print_stat( const TraceRecord& op, FILE *stream );
+		
 };
 
 class WlRaid:public RaidParent{
@@ -1173,10 +1187,13 @@ class WlRaid:public RaidParent{
 		std::vector<double> erasure_used;
 		WlRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1, double var_thre_ =  0.0003);
 		void redis_map( std::vector<ulong> new_parity_dis );
-		virtual double event_arrive( const TraceRecord& op );
-		virtual void init_map();
-		void check_reblance(const TraceRecord& op);
 		bool need_reblance(const TraceRecord& op);
+		void print_ssd_erasures( FILE* stream );
+		
+		//virtual double event_arrive( const TraceRecord& op );
+		virtual void init_map();
+		virtual void check_reblance(const TraceRecord& op);
+		virtual void check_and_print_stat( const TraceRecord& op, FILE *stream );
 };
 
 class DiffRaid:public RaidParent{
@@ -1185,23 +1202,26 @@ class DiffRaid:public RaidParent{
 		uint parity_loop;
 		bool shifting;
 		DiffRaid( std::vector<uint> parity_dis_, uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1, bool shifting_ = true);
-		virtual void swap_ssd( uint ssd_id, double time );
 		void adjust_parity_distribution( uint ssd_id, double time, double size );
-		virtual double event_arrive( const TraceRecord& op );
+		
+		//virtual double event_arrive( const TraceRecord& op );
 		virtual void init_map();
+		virtual void swap_ssd( uint ssd_id, double time );
 };
 
 class Raid5:public RaidParent{
 	public:
 		Raid5(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);
-		virtual double event_arrive( const TraceRecord& op );
+		
+		//virtual double event_arrive( const TraceRecord& op );
 		virtual void init_map();
 };
 
 class Raid6:public RaidParent{
 	public:
 		Raid6(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);
-		virtual double event_arrive( const TraceRecord& op );
+		
+		//virtual double event_arrive( const TraceRecord& op );
 		virtual void init_map();
 };
 
