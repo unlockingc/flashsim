@@ -190,10 +190,10 @@ void WlRaid::check_reblance(const TraceRecord& op){
         for( int i = 0; i < loops; i++ ){
             for( int j = 0; j < ssd_count; j ++ ){
                 if( moved[j] != 0){
-                    print_rebalance_workload( j, 0, i*parity_lcm, op.arrive_time, abs(moved[j]),stdout );
+                    print_rebalance_workload( j, 0, i*parity_lcm, op.arrive_time, std::abs(moved[j]),stdout );
                     for( int p = 0; p < pages_per_sblock; p ++ ){
-                        raid_ssd.Ssds[j].event_arrive(READ, i*parity_lcm*pages_per_sblock + p, abs(moved[j]), op.arrive_time);
-                        raid_ssd.Ssds[j].event_arrive(WRITE, i*parity_lcm*pages_per_sblock + p, abs(moved[j]), op.arrive_time);
+                        raid_ssd.Ssds[j].event_arrive(READ, i*parity_lcm*pages_per_sblock + p, std::abs(moved[j]), op.arrive_time);
+                        raid_ssd.Ssds[j].event_arrive(WRITE, i*parity_lcm*pages_per_sblock + p, std::abs(moved[j]), op.arrive_time);
                     }
                 }
             }

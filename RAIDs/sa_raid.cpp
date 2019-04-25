@@ -122,7 +122,7 @@ bool operator < (Read_pair const & a, Read_pair const & b)
 }
 
 double sigmod( double x ){
-    return x/(1 + abs(x));
+    return x/(1 + std::abs(x));
 }
 
 uint SaRaid::get_migrate_blocks_for_write( double var ){
