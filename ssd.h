@@ -48,8 +48,8 @@ namespace ssd {
 #define MEM_ERR -1
 #define FILE_ERR -2
 
-#define REBALANCE_THRE 5000
-#define RAID_SSD_ERASURS 50000
+#define REBALANCE_THRE 4000
+#define RAID_SSD_ERASURS 100000
 #define MIG_UPPER_BOUND 400*1024
 
 /* Uncomment to disable asserts for production */
