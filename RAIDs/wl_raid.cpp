@@ -171,7 +171,7 @@ void WlRaid::check_reblance(const TraceRecord& op){
         ulong a1 = parity_lcm / last_parity_loop, b1 = parity_lcm / new_parity_loop;
 
         ulong miged_per_loop = 0;
-        ulong moved[ssd_count];
+        double moved[ssd_count];
         for( int i = 0; i < ssd_count; i++ ){
             moved[i] = last_parity_dis[i]*a1 - parity_dis[i]*b1;
             if( moved[i] > 0 ){
