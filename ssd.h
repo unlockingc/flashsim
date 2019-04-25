@@ -48,6 +48,10 @@ namespace ssd {
 #define MEM_ERR -1
 #define FILE_ERR -2
 
+#define REBALANCE_THRE 5000
+#define RAID_SSD_ERASURS 4000
+#define MIG_UPPER_BOUND 400*1024
+
 /* Uncomment to disable asserts for production */
 #define NDEBUG
 
@@ -1138,6 +1142,8 @@ class RaidParent{
 		double ssd_erasures;
 		double last_print_time;
 		double last_rtimep;
+		double total_writes;
+		double total_reads;
 		
 		RaidSsd raid_ssd;
 		std::vector<std::vector<uint>> smap; //the map[i][j] means the logical block id of i stripe's j ssd
@@ -1170,7 +1176,7 @@ class SaRaid:public RaidParent{
 		double last_rtime,time_thre,max_mig,var_thre,diff_percent;
 		bool read_opt;
 		std::vector<double> diff_erasures;
-		SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1,double time_thre_ = 3 * 60 /*todo: debug2*/, double max_mig_ = 400*1024, double diff_percent_ = 0.05,double var_thre_ = 0.0003, bool read_opt_ = false );
+		SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1,double time_thre_ = 3 * 60 /*todo: debug2*/, double max_mig_ = MIG_UPPER_BOUND, double diff_percent_ = 0.05,double var_thre_ = 0.0003, bool read_opt_ = false );
 		
 		uint get_migrate_blocks_for_write( double var ); 
 		

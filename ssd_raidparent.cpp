@@ -7,7 +7,7 @@ using namespace ssd;
 
 RaidParent::RaidParent( uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_, uint pages_per_sblock_ )\
 :ssd_count(ssd_count_),pages_per_ssd(pages_per_ssd_),pages_per_sblock(pages_per_sblock_),\
-stripe_count(pages_per_ssd_/pages_per_sblock_), parity_count(parity_count_),\
+stripe_count(pages_per_ssd_/pages_per_sblock_), parity_count(parity_count_),total_writes(0),total_reads(0),\
 ssd_erasures(ssd_erasures_),ssd_reads(ssd_count_,0),ssd_writes(ssd_count_,0),last_rtimep(0),ssd_dead( ssd_count_,0 ),\
 smap(pages_per_ssd_/pages_per_sblock_,std::vector<uint>(ssd_count_,0)),erasure_left(ssd_count_,0),last_print_time(0){
 	for( int i = 0; i < ssd_count; i ++ ){
@@ -49,6 +49,7 @@ double RaidParent::event_arrive( const TraceRecord& op){
 		
 		erasure_left[ssd_ids[0]] -= opSize;
         ssd_writes[ssd_ids[0]] += (double)opSize;
+		total_writes += (double)opSize;
         
 		if(num_writes.find(stripe_id) != num_writes.end()){
             num_writes[stripe_id][ssd_ids[0]] += (double)opSize;
@@ -59,12 +60,15 @@ double RaidParent::event_arrive( const TraceRecord& op){
         //record the parity right
         for( int i = 0; i < parity_count; i ++ ){
                 ssd_writes[ssd_ids[i + 1]] += (double)opSize;
+				total_writes += (double)opSize;
+
                 num_writes[stripe_id][ssd_ids[i + 1]] += opSize;
 				erasure_left[ssd_ids[i + 1]] -= opSize;
         }
         
     } else if( op.op == 'r' ){
         ssd_reads[ssd_ids[0]] += (double)opSize;
+		total_reads += (double)opSize;
         if(num_reads.find(stripe_id) != num_reads.end()){
             num_reads[stripe_id][ssd_ids[0]] += (double)opSize;
         } else{
@@ -174,18 +178,15 @@ void RaidParent::check_reblance(const TraceRecord& op){
             ssd_writes[i] = 0;
             ssd_reads[i] = 0; 
 		}
+		total_writes = 0;
+		total_reads = 0;
 	}
 	return;
 }
 
 bool RaidParent::need_reblance(const TraceRecord& op){
     
-    if( op.arrive_time - last_rtimep > 3 * 60 ){
-        last_rtimep = op.arrive_time;
-        return true;
-    }
-
-    return false;
+    return (total_writes >= REBALANCE_THRE);
 }
 
 void RaidParent::print_migrate_data( uint start, uint end, FILE* stream ){

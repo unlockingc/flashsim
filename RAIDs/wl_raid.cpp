@@ -218,6 +218,17 @@ void WlRaid::check_reblance(const TraceRecord& op){
         fprintf(stdout, "rebalance_write_cost,%lf,%lf,=,%lf\n", op.arrive_time, total_miged, double(duration.count()) * microseconds::period::num / microseconds::period::den);
  
         last_parity_loop = new_parity_loop;
+
+        //clean data
+        num_writes.clear();
+        num_reads.clear();
+        
+        for( int i = 0; i < ssd_count; i++ ) {
+            ssd_writes[i] = 0;
+            ssd_reads[i] = 0; 
+		}
+		total_writes = 0;
+		total_reads = 0;
     }
 
 }
@@ -246,8 +257,9 @@ bool WlRaid::need_reblance(const TraceRecord& op){
     var = var/(double)ssd_count;
 
     bool time_enough = false;
-    if( op.arrive_time - last_rtimep > 3 * 60 ){
-        last_rtimep = op.arrive_time;
+    if( total_writes > REBALANCE_THRE ){
+        total_writes = 0;
+        total_reads = 0;
         time_enough = true;
     }
 

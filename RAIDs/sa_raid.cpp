@@ -327,6 +327,9 @@ void SaRaid::check_reblance(const TraceRecord& op){
             ssd_writes[i] = 0;
             ssd_reads[i] = 0; 
         }
+
+		total_writes = 0;
+		total_reads = 0;
     }
 
 }
@@ -335,12 +338,12 @@ void SaRaid::check_reblance(const TraceRecord& op){
 
 bool SaRaid::need_reblance(const TraceRecord& op){
     
-    if( op.arrive_time - last_rtime > time_thre ){
-        last_rtime = op.arrive_time;
-        return true;
-    }
+    // if( op.arrive_time - last_rtime > time_thre ){
+    //     last_rtime = op.arrive_time;
+    //     return true;
+    // }
 
-    return false;
+    return (total_writes >= REBALANCE_THRE);
 }
 
 void SaRaid::print_ssd_erasures( FILE* stream, double time ){
