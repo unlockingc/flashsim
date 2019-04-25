@@ -245,11 +245,17 @@ bool WlRaid::need_reblance(const TraceRecord& op){
 
     var = var/(double)ssd_count;
 
-    return var >= var_thre;
+    bool time_enough = false;
+    if( op.arrive_time - last_rtimep > 3 * 60 ){
+        last_rtimep = op.arrive_time;
+        time_enough = true;
+    }
+
+    return (var >= var_thre) && time_enough;
 }
 
 
-//todo: debug-1
+//todo: debug-1 : if the var cross the thre, it always active the rebalance, that is stupid
 // bool WlRaid::need_reblance(const TraceRecord& op){
 
 //     for( int i = 0; i< ssd_count; i++ ){

@@ -22,7 +22,7 @@ int main(int argc, char **argv){
     
     ulong pages_per_ssd = SSD_SIZE * PACKAGE_SIZE * DIE_SIZE * PLANE_SIZE * BLOCK_SIZE / 2;
 
-    double ssd_erasures = 4000;
+    double ssd_erasures = 4000;/*todo: debug3*/
 
     if( raid_type == "raid5" ){
         raid = new Raid5(RAID_NUMBER_OF_PHYSICAL_SSDS, pages_per_ssd, 1, ssd_erasures );
