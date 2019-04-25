@@ -205,12 +205,13 @@ void SaRaid::check_reblance(const TraceRecord& op){
         //record alogrithm time
         auto end   = system_clock::now();
         auto duration = duration_cast<microseconds>(end - start);
-        fprintf(stdout, "rebalance_write_cost,%lf,%lf\n", op.arrive_time, double(duration.count()) * microseconds::period::num / microseconds::period::den);
+        double total_mig = 0;
         for( int i = 0; i < stripe_selected.size(); i++ ){
             if( rebalanced[a] >= 0 ){
                 break;
             }
             //todo: output the balance workload
+            total_mig ++;
             print_rebalance_workload( smap[stripe_selected[i].id][parity_count-1], a, stripe_selected[i].id, op.arrive_time,1, stdout ); 
             for( int j = 0; j < pages_per_sblock; j ++)
             {
@@ -238,6 +239,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
                 assert( a < ssd_count );
             }
         }
+        fprintf(stdout, "rebalance_write_cost,%lf,%lf,=,%lf\n", op.arrive_time,total_mig,double(duration.count()) * microseconds::period::num / microseconds::period::den);
         //读均衡
         if(read_opt){
             //record algorithm time
@@ -288,15 +290,14 @@ void SaRaid::check_reblance(const TraceRecord& op){
             //record alogrithm time
             auto end   = system_clock::now();
             auto duration = duration_cast<microseconds>(end - start);
-            fprintf(stdout, "rebalance_read_cost,%lf,%lf\n", op.arrive_time, double(duration.count()) * microseconds::period::num / microseconds::period::den);
-            
+            double total_miged_read = 0; 
             for( int i = read_rank.size()-1; i>=0; i -- ){
                 if(miged >= max_mig){
                     break;
                 }
 
                 if( need[read_rank[i].ssd1] > 0 && need[read_rank[i].ssd2] < 0 ){
-
+                    total_miged_read ++;
                     for( int k = 0; k < ssd_count; k ++ ){
                         if( smap[read_rank[i].id][k] == read_rank[i].ssd1 ){
                             smap[read_rank[i].id][k] = read_rank[i].ssd2;
@@ -316,6 +317,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
                     }
                 }
             }
+            fprintf(stdout, "rebalance_read_cost,%lf,%lf,=,%lf\n", op.arrive_time,total_miged_read, double(duration.count()) * microseconds::period::num / microseconds::period::den);
         }
         //clean data
         num_writes.clear();

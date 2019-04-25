@@ -125,7 +125,7 @@ void RaidParent::swap_ssd( uint ssd_id, double time ) {
 	temp_m.ssd_id = ssd_id;
 	migrations.push_back(temp_m);
 
-	//todo: debug
+	//todo: debug1
 	//erasure_left[ssd_id] -= temp_m.size;
 
 	print_migrate_data(migrations.size() - 1, migrations.size() - 1, stdout);
@@ -139,12 +139,12 @@ void RaidParent::check_and_print_stat( const TraceRecord& op,FILE* stream ){
 }
 
 bool RaidParent::need_print( const TraceRecord& op ){
-	if( op.arrive_time - last_print_time > 10 * 60 ){
+	if( op.arrive_time - last_print_time > 3 * 60 ){
 		last_print_time = op.arrive_time;
 		return true;
 	}
 
-	//todo: debug
+	//todo: debug-1
 	// if( op.arrive_time >= 28.324659 ){
 	// 	return true;
 	// }
@@ -193,6 +193,6 @@ void RaidParent::print_migrate_data( uint start, uint end, FILE* stream ){
 	assert( end < migrations.size() );
 	
 	for( int i = start; i <= end; i ++ ){
-		fprintf( stream, "migration,%lf,=,%d,%lf\n",migrations[i].time, migrations[i].ssd_id,migrations[i].size  );
+		fprintf( stream, "migration,%s,%lf,=,%d,%lf\n", (migrations[i].wtype == 0?"recovery":"redistribution"),migrations[i].time, migrations[i].ssd_id,migrations[i].size  );
 	}
 }

@@ -135,11 +135,14 @@ void DiffRaid::swap_ssd( uint ssd_id, double time ) {
 	temp_m.ssd_id = ssd_id;
 	migrations.push_back(temp_m);
 
-	erasure_left[ssd_id] -= temp_m.size;
+    print_migrate_data(migrations.size() - 1, migrations.size() - 1, stdout);
+	
+    //todo: debug1
+    //erasure_left[ssd_id] -= temp_m.size;
 
     adjust_parity_distribution(ssd_id, time, size);
     
-    print_migrate_data(migrations.size() - 1, migrations.size() - 1, stdout);
+    
 }
 
 void DiffRaid::adjust_parity_distribution( uint ssd_id, double time, double size ){
@@ -155,7 +158,7 @@ void DiffRaid::adjust_parity_distribution( uint ssd_id, double time, double size
 
     //find where to shift        
     if( min == parity_dis[ssd_id] ){
-        fprintf(stderr, "worning: ssd just swapped has the min parities(diff raid)");
+        fprintf(stderr, "worning: ssd just swapped has the min parities(diff raid)\n");
         return;
     } else if( min == parity_dis[next_ssd] ){
         min_id = next_ssd;
@@ -172,8 +175,9 @@ void DiffRaid::adjust_parity_distribution( uint ssd_id, double time, double size
         for( int i = 0; i < stripe_count; i ++ ){
             if( smap[i][ssd_count - 1] == ssd_id ){
                 if( moved < need ){
-                    for( int j = ssd_count; j < ssd_count*2; j ++ ){
-                        smap[i][j] = smap[i][(j+1)%ssd_count];     
+                    temp = next_ssd < ssd_id? next_ssd + ssd_count - ssd_id : next_ssd - ssd_id;
+                    for( int j = 0; j < ssd_count; j ++ ){
+                        smap[i][j] = (smap[i][j] + temp) % ssd_count;     
                     }
                     moved ++;
                 } else if( moved < need + need_min ){
@@ -199,11 +203,14 @@ void DiffRaid::adjust_parity_distribution( uint ssd_id, double time, double size
         MigrationRecord temp_s;
         temp_s.time = time;
         temp_s.size = size * percent;
+        temp_s.wtype = 1;
 
         for( int i = 0; i < ssd_count; i ++ ){
             temp_s.ssd_id = i;
             migrations.push_back(temp_s);
-            erasure_left[i] -= temp_s.size;
+            //todo: debug1
+            //erasure_left[i] -= temp_s.size;
+            print_migrate_data(migrations.size() - 1, migrations.size() - 1, stdout);
         }
 
     } else {
@@ -251,10 +258,13 @@ void DiffRaid::adjust_parity_distribution( uint ssd_id, double time, double size
         //record data migrate cost
         MigrationRecord temp_s;
         temp_s.time = time;
+        temp_s.wtype = 1;
 
         temp_s.size = size * (percent1 + percent2);
         temp_s.ssd_id = ssd_id;
         migrations.push_back(temp_s);
+        print_migrate_data(migrations.size() - 1, migrations.size() - 1, stdout);
+
         erasure_left[ssd_id] -= temp_s.size;
 
         temp_s.size = size * (percent1);
@@ -266,7 +276,9 @@ void DiffRaid::adjust_parity_distribution( uint ssd_id, double time, double size
         temp_s.size = size * (percent2);
         temp_s.ssd_id = min_id;
         migrations.push_back(temp_s);
-        erasure_left[min_id] -= temp_s.size;
+        
+        //todo: debug1
+        //erasure_left[min_id] -= temp_s.size;
     }
 
     //update dis

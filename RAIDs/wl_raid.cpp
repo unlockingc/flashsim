@@ -152,52 +152,62 @@ void WlRaid::check_reblance(const TraceRecord& op){
         mean = mean / ssd_count;
 
         std::vector<ulong> parity_dis(ssd_count,0);
+        std::vector<double> parity_temp(ssd_count, 0);
+        double temp_max = 0;
         for( int i = 0; i < ssd_count; i ++ ){
-            parity_dis[i] = (ulong)((erasure_used[i] / mean) * 100.0); //todo: find a proper number
+            parity_temp[i] = ((erasure_used[i] / mean) * 100.0); //todo: find a proper number
+            temp_max = temp_max > parity_temp[i] ? temp_max : parity_temp[i];
+            parity_temp[i] = 1.0/parity_temp[i];
         }
 
-        ulong temp_lcm = lcm( parity_dis[0], parity_dis[1] );
         for( int i = 0; i < ssd_count; i ++ ){
-            temp_lcm = lcm(temp_lcm, parity_dis[i]);
+            parity_temp[i] = temp_max * parity_temp[i] * 100.0;
+            parity_dis[i] = (ulong) parity_temp[i];
         }
 
         ulong new_parity_loop = 0;
         for( int i = 0; i < ssd_count; i ++ ){
-            parity_dis[i] = temp_lcm / parity_dis[i];
             new_parity_loop += parity_dis[i];
         }
 
         ulong parity_lcm = lcm( new_parity_loop, last_parity_loop );
-        ulong a1 = parity_lcm / last_parity_loop, b1 = parity_lcm / new_parity_loop;
+        double a1 = parity_lcm / last_parity_loop, b1 = parity_lcm / new_parity_loop;
 
-        ulong miged_per_loop = 0;
+        double miged_per_loop = 0;
         double moved[ssd_count];
         for( int i = 0; i < ssd_count; i++ ){
-            moved[i] = last_parity_dis[i]*a1 - parity_dis[i]*b1;
+            moved[i] = (double)(last_parity_dis[i])*a1 - (double)(parity_dis[i])*b1;
             if( moved[i] > 0 ){
                 miged_per_loop += moved[i];
             }
         }
 
         int loops = stripe_count / parity_lcm + ( stripe_count / parity_lcm != 0 );
-        ulong total_miged = miged_per_loop *( loops );
+        double total_miged = miged_per_loop *( loops );
                 
         //record alogrithm time
         auto end   = system_clock::now();
         auto duration = duration_cast<microseconds>(end - start);
         
-
-        for( int i = 0; i < loops; i++ ){
-            for( int j = 0; j < ssd_count; j ++ ){
-                if( moved[j] != 0){
-                    print_rebalance_workload( j, 0, i*parity_lcm, op.arrive_time, std::abs(moved[j]),stdout );
-                    for( int p = 0; p < pages_per_sblock; p ++ ){
-                        raid_ssd.Ssds[j].event_arrive(READ, i*parity_lcm*pages_per_sblock + p, std::abs(moved[j]), op.arrive_time);
-                        raid_ssd.Ssds[j].event_arrive(WRITE, i*parity_lcm*pages_per_sblock + p, std::abs(moved[j]), op.arrive_time);
-                    }
-                }
+        for( int j = 0; j < ssd_count; j ++ ){
+            if(moved[j] > 0){
+                print_rebalance_workload( j, 0, 0, op.arrive_time, moved[j]*loops,stdout );
             }
         }
+
+        //todo: debug3
+        // for( int i = 0; i < loops; i++ ){
+        //     for( int j = 0; j < ssd_count; j ++ ){
+        //         if( moved[j] != 0){
+        //             for( int p = 0; p < pages_per_sblock; p ++ ){
+        //                 for( int q = 0; q < abs(moved[j]); q++ ){
+        //                     raid_ssd.Ssds[j].event_arrive(READ, i*parity_lcm*pages_per_sblock + q + p, 1, op.arrive_time);
+        //                     raid_ssd.Ssds[j].event_arrive(WRITE, i*parity_lcm*pages_per_sblock + q + p, 1, op.arrive_time);
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
         
         start = system_clock::now();
         redis_map( parity_dis );
@@ -205,7 +215,7 @@ void WlRaid::check_reblance(const TraceRecord& op){
         //record alogrithm time
         end = system_clock::now();
         duration += duration_cast<microseconds>(end - start);
-        fprintf(stdout, "rebalance_read_cost,%lf,%lf\n", op.arrive_time, double(duration.count()) * microseconds::period::num / microseconds::period::den);
+        fprintf(stdout, "rebalance_write_cost,%lf,%lf,=,%lf\n", op.arrive_time, total_miged, double(duration.count()) * microseconds::period::num / microseconds::period::den);
  
         last_parity_loop = new_parity_loop;
     }
@@ -233,10 +243,28 @@ bool WlRaid::need_reblance(const TraceRecord& op){
         var += ((erasure_used[i] - mean)/ssd_erasures) * ((erasure_used[i] - mean)/ssd_erasures);
     }
 
-    var = var/ssd_count;
+    var = var/(double)ssd_count;
 
     return var >= var_thre;
 }
+
+
+//todo: debug-1
+// bool WlRaid::need_reblance(const TraceRecord& op){
+
+//     for( int i = 0; i< ssd_count; i++ ){
+//         erasure_used[i] = ssd_erasures - erasure_left[i] + ssd_erasures * ssd_dead[i];
+//         erasure_used[i] = (double)((ulong)(erasure_used[i]) % (ulong)(3*ssd_erasures)); //todo: make sure max - min 3*ssd_erasures;
+//     }
+ 
+//     if( op.arrive_time - last_rtimep > 10 ){
+//         last_rtimep = op.arrive_time;
+//         return true;
+//     }
+
+//     return false;
+//}
+
 
 void WlRaid::print_ssd_erasures( FILE* stream, double time ){
     double mean = 0;

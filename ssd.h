@@ -1119,10 +1119,12 @@ struct TraceRecord{
 
 struct MigrationRecord{
 	public:
-	double time;
-    uint ssd_id;
-	uint io_type;
-    double size;
+		double time;
+		uint ssd_id;
+		uint io_type;
+		uint wtype;
+		double size;
+		MigrationRecord():time(0),ssd_id(0),io_type(0),wtype(0),size(0){}
 };
 
 class RaidParent{
@@ -1168,7 +1170,7 @@ class SaRaid:public RaidParent{
 		double last_rtime,time_thre,max_mig,var_thre,diff_percent;
 		bool read_opt;
 		std::vector<double> diff_erasures;
-		SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1,double time_thre_ = 10, double max_mig_ = 400*1024, double diff_percent_ = 0.05,double var_thre_ = 0.0003, bool read_opt_ = false );
+		SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1,double time_thre_ = 3 * 60 /*todo: debug2*/, double max_mig_ = 400*1024, double diff_percent_ = 0.05,double var_thre_ = 0.0003, bool read_opt_ = false );
 		
 		uint get_migrate_blocks_for_write( double var ); 
 		
