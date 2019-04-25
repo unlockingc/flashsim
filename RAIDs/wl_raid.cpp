@@ -136,7 +136,7 @@ ulong lcm( ulong n, ulong m ){
 }
 
 inline void print_rebalance_workload( uint ssd1, uint ssd2, uint stripe_id, double time, double size, FILE* stream ){
-    fprintf( stream,"rebalance,time,=,%d,%d,%d,%lf\n", time,ssd1,ssd2,stripe_id,size);
+    fprintf( stream,"rebalance,%lf,=,%d,%d,%d,%lf\n", time,ssd1,ssd2,stripe_id,size);
 }
 
 void WlRaid::check_reblance(const TraceRecord& op){
@@ -153,7 +153,7 @@ void WlRaid::check_reblance(const TraceRecord& op){
 
         std::vector<ulong> parity_dis(ssd_count,0);
         for( int i = 0; i < ssd_count; i ++ ){
-            parity_dis[i] = (ulong)((erasure_used[i] / mean) * 100.0);
+            parity_dis[i] = (ulong)((erasure_used[i] / mean) * 100.0); //todo: find a proper number
         }
 
         ulong temp_lcm = lcm( parity_dis[0], parity_dis[1] );
@@ -217,7 +217,8 @@ void WlRaid::check_reblance(const TraceRecord& op){
 bool WlRaid::need_reblance(const TraceRecord& op){
     
     for( int i = 0; i< ssd_count; i++ ){
-        erasure_used[i] = ssd_erasures - erasure_left[i];
+        erasure_used[i] = ssd_erasures - erasure_left[i] + ssd_erasures * ssd_dead[i];
+        erasure_used[i] = (double)((ulong)(erasure_used[i]) % (ulong)(3*ssd_erasures)); //todo: make sure max - min 3*ssd_erasures;
     }
 
     double mean = 0;

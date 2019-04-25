@@ -8,7 +8,7 @@ using namespace ssd;
 RaidParent::RaidParent( uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_, uint pages_per_sblock_ )\
 :ssd_count(ssd_count_),pages_per_ssd(pages_per_ssd_),pages_per_sblock(pages_per_sblock_),\
 stripe_count(pages_per_ssd_/pages_per_sblock_), parity_count(parity_count_),\
-ssd_erasures(ssd_erasures_),ssd_reads(ssd_count_,0),ssd_writes(ssd_count_,0),last_rtimep(0),\
+ssd_erasures(ssd_erasures_),ssd_reads(ssd_count_,0),ssd_writes(ssd_count_,0),last_rtimep(0),ssd_dead( ssd_count_,0 ),\
 smap(pages_per_ssd_/pages_per_sblock_,std::vector<uint>(ssd_count_,0)),erasure_left(ssd_count_,0),last_print_time(0){
 	for( int i = 0; i < ssd_count; i ++ ){
 		erasure_left[i] = ssd_erasures;
@@ -116,6 +116,7 @@ void RaidParent::swap_ssd( uint ssd_id, double time ) {
 
 	//renew ssd
 	erasure_left[ssd_id] = ssd_erasures;
+	ssd_dead[ssd_id] ++;
 
 	//record data migrate cost
 	MigrationRecord temp_m;
@@ -124,7 +125,8 @@ void RaidParent::swap_ssd( uint ssd_id, double time ) {
 	temp_m.ssd_id = ssd_id;
 	migrations.push_back(temp_m);
 
-	erasure_left[ssd_id] -= temp_m.size;
+	//todo: debug
+	//erasure_left[ssd_id] -= temp_m.size;
 
 	print_migrate_data(migrations.size() - 1, migrations.size() - 1, stdout);
 }
@@ -163,6 +165,7 @@ bool RaidParent::need_print( const TraceRecord& op ){
 
 void RaidParent::check_reblance(const TraceRecord& op){
 	if( need_reblance( op ) ){
+
 		//clean data
         num_writes.clear();
         num_reads.clear();
@@ -177,7 +180,7 @@ void RaidParent::check_reblance(const TraceRecord& op){
 
 bool RaidParent::need_reblance(const TraceRecord& op){
     
-    if( op.arrive_time - last_rtimep > 10 * 60 ){
+    if( op.arrive_time - last_rtimep > 3 * 60 ){
         last_rtimep = op.arrive_time;
         return true;
     }
@@ -190,6 +193,6 @@ void RaidParent::print_migrate_data( uint start, uint end, FILE* stream ){
 	assert( end < migrations.size() );
 	
 	for( int i = start; i <= end; i ++ ){
-		fprintf( stream, "migration,%d,%lf,%lf\n",migrations[i].ssd_id,migrations[i].size, migrations[i].time );
+		fprintf( stream, "migration,%lf,=,%d,%lf\n",migrations[i].time, migrations[i].ssd_id,migrations[i].size  );
 	}
 }

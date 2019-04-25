@@ -127,12 +127,12 @@ double sigmod( double x ){
 
 uint SaRaid::get_migrate_blocks_for_write( double var ){
     double x = (var/var_thre);
-    double percent = sigmod(9*x - 9) + sigmod(9);
+    double percent = (sigmod(9*x - 9) + sigmod(9))/2.0;
     return (uint) (max_mig * percent);
 }
 
 inline void print_rebalance_workload( uint ssd1, uint ssd2, uint stripe_id, double time, double size, FILE* stream ){
-    fprintf( stream,"rebalance,time,=,%d,%d,%d,%lf\n", time,ssd1,ssd2,stripe_id,size);
+    fprintf( stream,"rebalance,%lf,=,%d,%d,%d,%lf\n", time,ssd1,ssd2,stripe_id,size);
 }
 
 void SaRaid::check_reblance(const TraceRecord& op){
@@ -146,17 +146,19 @@ void SaRaid::check_reblance(const TraceRecord& op){
         double rebalanced[ssd_count];
         double mean = 0;
         double total_need = 0;
+        double erasure_real[ssd_count];
         for( int i = 0; i < ssd_count; i ++ ){
-            mean += erasure_left[i];
+            erasure_real[i] = erasure_left[i] - ssd_erasures * ssd_dead[i];
+            mean += erasure_real[i];
         }
         mean = mean / (double)ssd_count;
 
         double var = 0;
         for( int i = 0; i < ssd_count; i ++ ){
             aim[i] = mean + diff_erasures[i];
-            need[i] = aim[i] - erasure_left[i];
+            need[i] = aim[i] - erasure_real[i];
             total_need += (need[i] > 0)?need[i]:0;
-            var += ((erasure_left[i] - aim[i])/ssd_erasures) * ((erasure_left[i] - aim[i])/ssd_erasures);
+            var += ((erasure_real[i] - aim[i])/ssd_erasures) * ((erasure_real[i] - aim[i])/ssd_erasures);
         }
     
         var = var / ssd_count;
@@ -196,7 +198,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
 
         int a = 0;
         uint temp_id = 0;
-        while( rebalanced[a] >= 0 ){
+        while( rebalanced[a] >= 0 && a < ssd_count ){
             a ++;
         }
 
@@ -205,9 +207,12 @@ void SaRaid::check_reblance(const TraceRecord& op){
         auto duration = duration_cast<microseconds>(end - start);
         fprintf(stdout, "rebalance_write_cost,%lf,%lf\n", op.arrive_time, double(duration.count()) * microseconds::period::num / microseconds::period::den);
         for( int i = 0; i < stripe_selected.size(); i++ ){
+            if( rebalanced[a] >= 0 ){
+                break;
+            }
             //todo: output the balance workload
             print_rebalance_workload( smap[stripe_selected[i].id][parity_count-1], a, stripe_selected[i].id, op.arrive_time,1, stdout ); 
-            for( int j = 0; j < pages_per_sblock; i ++)
+            for( int j = 0; j < pages_per_sblock; j ++)
             {
                 raid_ssd.Ssds[smap[stripe_selected[i].id][parity_count-1]].event_arrive(READ, stripe_selected[i].id*pages_per_sblock + j, 1, op.arrive_time);
                 raid_ssd.Ssds[a].event_arrive(READ, stripe_selected[i].id*pages_per_sblock + j, 1, op.arrive_time);
@@ -302,7 +307,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
                         }
                     }
 
-                    for( int j = 0; j < pages_per_sblock; i ++)
+                    for( int j = 0; j < pages_per_sblock; j ++)
                     {
                         raid_ssd.Ssds[read_rank[i].ssd1].event_arrive(READ, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
                         raid_ssd.Ssds[read_rank[i].ssd2].event_arrive(WRITE, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
@@ -340,7 +345,7 @@ void SaRaid::print_ssd_erasures( FILE* stream, double time ){
     double mean = 0;
     fprintf(stream, "erasures_data,%lf,=,",time);
     for( int i = 0; i < ssd_count; i++ ){
-        mean += erasure_left[i];
+        mean += (erasure_left[i]);
         fprintf(stream, "%lf,", erasure_left[i]);
     }
 

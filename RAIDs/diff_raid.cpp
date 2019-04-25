@@ -126,6 +126,7 @@ void DiffRaid::swap_ssd( uint ssd_id, double time ) {
 
 	//renew ssd
 	erasure_left[ssd_id] = ssd_erasures;
+    ssd_dead[ssd_id] ++;
 
 	//record data migrate cost
 	MigrationRecord temp_m;

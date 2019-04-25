@@ -1140,6 +1140,7 @@ class RaidParent{
 		RaidSsd raid_ssd;
 		std::vector<std::vector<uint>> smap; //the map[i][j] means the logical block id of i stripe's j ssd
 		std::vector<double> erasure_left;
+		std::vector<double> ssd_dead;
 
 		std::map<uint, std::vector<double>> num_reads;
 		std::map<uint, std::vector<double>> num_writes;
@@ -1167,9 +1168,9 @@ class SaRaid:public RaidParent{
 		double last_rtime,time_thre,max_mig,var_thre,diff_percent;
 		bool read_opt;
 		std::vector<double> diff_erasures;
-		SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1,double time_thre_ = 600, double max_mig_ = 400*1024, double diff_percent_ = 0.05,double var_thre_ = 0.0003, bool read_opt_ = false );
+		SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1,double time_thre_ = 10, double max_mig_ = 400*1024, double diff_percent_ = 0.05,double var_thre_ = 0.0003, bool read_opt_ = false );
 		
-		uint get_migrate_blocks_for_write( double var );
+		uint get_migrate_blocks_for_write( double var ); 
 		
 		void print_ssd_erasures( FILE* stream, double time );
 		
