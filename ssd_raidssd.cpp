@@ -62,7 +62,7 @@ RaidSsd::~RaidSsd(void)
 }
 
 void RaidSsd::swap_ssd(uint id){
-	Ssd temp;
+	Ssds[id].~Ssd();
 	(void) new (&Ssds[id]) Ssd();
 }
 
@@ -137,23 +137,28 @@ void RaidSsd::print_statistics()
 
 }
 
-void RaidSsd::write_statistics(FILE* stream)
+void RaidSsd::write_statistics(FILE* stream, double time)
 {
 	for (uint i=0;i<RAID_NUMBER_OF_PHYSICAL_SSDS;i++)
 	{
-		fprintf(stream, "%d,",i);
+		fprintf(stream, "ssd_stat,%d,%lf,=,",i,time);
 		Ssds[i].write_statistics(stream);
 	}
 }
 
 
 
-void RaidSsd::reset_statistics(){
+void RaidSsd::reset_statistics(FILE* stream){
 	for (uint i=0;i<RAID_NUMBER_OF_PHYSICAL_SSDS;i++)
 	{
-		printf ("%u %s",i, " th SSD \n");
+		//fprintf ( stream,"reset ssd stat %u %s",i, " th SSD \n");
 		Ssds[i].reset_statistics();
 	}
+}
+
+void RaidSsd::write_header( FILE* stream ){
+	fprintf( stream, "data_type,ssd_id,time,=," );
+	Ssds[0].write_header(stream);
 }
 
 void RaidSsd::print_ftl_statistics()

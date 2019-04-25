@@ -8,11 +8,12 @@ using namespace ssd;
 RaidParent::RaidParent( uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_, uint pages_per_sblock_ )\
 :ssd_count(ssd_count_),pages_per_ssd(pages_per_ssd_),pages_per_sblock(pages_per_sblock_),\
 stripe_count(pages_per_ssd_/pages_per_sblock_), parity_count(parity_count_),\
-ssd_erasures(ssd_erasures_),ssd_reads(ssd_count_,0),ssd_writes(ssd_count_,0),\
+ssd_erasures(ssd_erasures_),ssd_reads(ssd_count_,0),ssd_writes(ssd_count_,0),last_rtimep(0),\
 smap(pages_per_ssd_/pages_per_sblock_,std::vector<uint>(ssd_count_,0)),erasure_left(ssd_count_,0),last_print_time(0){
 	for( int i = 0; i < ssd_count; i ++ ){
 		erasure_left[i] = ssd_erasures;
 	}
+	raid_ssd.write_header(stdout);
 }
 
 void RaidParent::init(){
@@ -58,7 +59,7 @@ double RaidParent::event_arrive( const TraceRecord& op){
         //record the parity right
         for( int i = 0; i < parity_count; i ++ ){
                 ssd_writes[ssd_ids[i + 1]] += (double)opSize;
-                num_writes[stripe_id][ssd_ids[i + 1]];
+                num_writes[stripe_id][ssd_ids[i + 1]] += opSize;
 				erasure_left[ssd_ids[i + 1]] -= opSize;
         }
         
@@ -85,6 +86,7 @@ double RaidParent::event_arrive( const TraceRecord& op){
 void RaidParent::check_erasure_and_swap_ssd( int opSize, uint* ssd_ids, int num, double time ){
 	for( int i = 0; i < num; i++ ){
 		if( erasure_left[ssd_ids[i]] - opSize <= 0 ){
+			printf(">>>>>>>SSD %d need to be swapped\n", ssd_ids[i]);
 			swap_ssd( ssd_ids[i], time );
 		}
 	}	
@@ -129,7 +131,8 @@ void RaidParent::swap_ssd( uint ssd_id, double time ) {
 
 void RaidParent::check_and_print_stat( const TraceRecord& op,FILE* stream ){
 	if( need_print( op ) ){
-		raid_ssd.write_statistics(stream);
+		raid_ssd.write_statistics(stream, op.arrive_time);
+		raid_ssd.reset_statistics();
 	}
 }
 
@@ -139,7 +142,12 @@ bool RaidParent::need_print( const TraceRecord& op ){
 		return true;
 	}
 
-	return true;
+	//todo: debug
+	// if( op.arrive_time >= 28.324659 ){
+	// 	return true;
+	// }
+	return false;
+	//return false;
 }
 
 // bool need_print( const TraceRecord& op ){
@@ -154,7 +162,27 @@ bool RaidParent::need_print( const TraceRecord& op ){
 
 
 void RaidParent::check_reblance(const TraceRecord& op){
+	if( need_reblance( op ) ){
+		//clean data
+        num_writes.clear();
+        num_reads.clear();
+        
+        for( int i = 0; i < ssd_count; i++ ) {
+            ssd_writes[i] = 0;
+            ssd_reads[i] = 0; 
+		}
+	}
 	return;
+}
+
+bool RaidParent::need_reblance(const TraceRecord& op){
+    
+    if( op.arrive_time - last_rtimep > 10 * 60 ){
+        last_rtimep = op.arrive_time;
+        return true;
+    }
+
+    return false;
 }
 
 void RaidParent::print_migrate_data( uint start, uint end, FILE* stream ){
@@ -162,6 +190,6 @@ void RaidParent::print_migrate_data( uint start, uint end, FILE* stream ){
 	assert( end < migrations.size() );
 	
 	for( int i = start; i <= end; i ++ ){
-		fprintf( stream, "%d,%lf,%lf\n",migrations[i].ssd_id,migrations[i].size, migrations[i].time );
+		fprintf( stream, "migration,%d,%lf,%lf\n",migrations[i].ssd_id,migrations[i].size, migrations[i].time );
 	}
 }

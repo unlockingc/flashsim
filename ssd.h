@@ -1091,8 +1091,8 @@ public:
 	void *get_result_buffer();
 	friend class Controller;
 	void print_statistics();
-	void reset_statistics();
-	void write_statistics(FILE *stream);
+	void reset_statistics(FILE *stream = stdout);
+	void write_statistics(FILE *stream,double time);
 	void write_header(FILE *stream);
 	void swap_ssd(uint id);
 	const Controller &get_controller(void) const;
@@ -1121,6 +1121,7 @@ struct MigrationRecord{
 	public:
 	double time;
     uint ssd_id;
+	uint io_type;
     double size;
 };
 
@@ -1134,6 +1135,7 @@ class RaidParent{
 		bool ssd_record;
 		double ssd_erasures;
 		double last_print_time;
+		double last_rtimep;
 		
 		RaidSsd raid_ssd;
 		std::vector<std::vector<uint>> smap; //the map[i][j] means the logical block id of i stripe's j ssd
@@ -1150,7 +1152,7 @@ class RaidParent{
 		void init();
 		void check_erasure_and_swap_ssd( int opSize, uint* ssd_ids, int num, double time );
 		
-		
+		virtual bool need_reblance(const TraceRecord& op);	
 		virtual void init_map();
 		virtual void swap_ssd( uint ssd_id, double time );
 		virtual void check_and_print_stat( const TraceRecord& op, FILE *stream );
@@ -1168,10 +1170,11 @@ class SaRaid:public RaidParent{
 		SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1,double time_thre_ = 600, double max_mig_ = 400*1024, double diff_percent_ = 0.05,double var_thre_ = 0.0003, bool read_opt_ = false );
 		
 		uint get_migrate_blocks_for_write( double var );
-		bool need_reblance(const TraceRecord& op);
-		void print_ssd_erasures( FILE* stream );
-
+		
+		void print_ssd_erasures( FILE* stream, double time );
+		
 		//virtual double event_arrive( const TraceRecord& op );
+		virtual bool need_reblance(const TraceRecord& op);
 		virtual void init_map();
 		virtual void check_reblance(const TraceRecord& op);
 		virtual void check_and_print_stat( const TraceRecord& op, FILE *stream );
@@ -1187,10 +1190,11 @@ class WlRaid:public RaidParent{
 		std::vector<double> erasure_used;
 		WlRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1, double var_thre_ =  0.0003);
 		void redis_map( std::vector<ulong> new_parity_dis );
-		bool need_reblance(const TraceRecord& op);
-		void print_ssd_erasures( FILE* stream );
+		
+		void print_ssd_erasures( FILE* stream, double time );
 		
 		//virtual double event_arrive( const TraceRecord& op );
+		virtual bool need_reblance(const TraceRecord& op);
 		virtual void init_map();
 		virtual void check_reblance(const TraceRecord& op);
 		virtual void check_and_print_stat( const TraceRecord& op, FILE *stream );

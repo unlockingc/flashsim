@@ -239,7 +239,7 @@ void load_entry(char *name, double value, uint line_number) {
 }
 
 void load_config(void) {
-	const char * const config_name = "ssd_mini.conf";
+	const char * const config_name = "ssd_128G.conf";
 	FILE *config_file = NULL;
 
 	/* update sscanf line below with max name length (%s) if changing sizes */

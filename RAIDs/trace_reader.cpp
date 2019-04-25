@@ -21,6 +21,11 @@ bool TraceReader::read_next( TraceRecord& op ){
     if(fgets(buffer, 80, trace_file) != NULL){
         sscanf(buffer, "%u,%lu,%u,%c,%lf", &op.diskno, &op.vaddr, &op.size, &op.op, &op.arrive_time);
         op.vaddr = op.vaddr%device_size;
+        if( op.op == 'W' ){
+            op.op = 'w';
+        } else if( op.op == 'R' ){
+            op.op = 'r';
+        }
         line_now ++;
     } else{
         op.diskno = 0;

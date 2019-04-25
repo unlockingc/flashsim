@@ -15,3 +15,5 @@ ufliptrace
 *.o
 *.kdev4
 /.vscode
+/traces/full
+/full

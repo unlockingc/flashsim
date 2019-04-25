@@ -2,8 +2,12 @@
 #include <assert.h>
 #include <stdio.h>
 #include "ssd.h"
-#include <algorithm> 
+#include <algorithm>
+#include <chrono>
+#include <ctime>
 
+using namespace std::chrono;
+using namespace std;
 using namespace ssd;
 
 SaRaid::SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_, uint pages_per_sblock_, double time_thre_, double max_mig_, double diff_percent_, double var_thre_, bool read_opt_):\
@@ -127,9 +131,15 @@ uint SaRaid::get_migrate_blocks_for_write( double var ){
     return (uint) (max_mig * percent);
 }
 
+inline void print_rebalance_workload( uint ssd1, uint ssd2, uint stripe_id, double time, double size, FILE* stream ){
+    fprintf( stream,"rebalance,time,=,%d,%d,%d,%lf\n", time,ssd1,ssd2,stripe_id,size);
+}
+
 void SaRaid::check_reblance(const TraceRecord& op){
 
     if( need_reblance(op) ){
+        //record algorithm time
+        auto start = system_clock::now();
         //写均衡
         double aim[ssd_count];
         double need[ssd_count];
@@ -190,10 +200,13 @@ void SaRaid::check_reblance(const TraceRecord& op){
             a ++;
         }
 
-        std::vector<TraceRecord> b_workload;
-        b_workload.clear();
+        //record alogrithm time
+        auto end   = system_clock::now();
+        auto duration = duration_cast<microseconds>(end - start);
+        fprintf(stdout, "rebalance_write_cost,%lf,%lf\n", op.arrive_time, double(duration.count()) * microseconds::period::num / microseconds::period::den);
         for( int i = 0; i < stripe_selected.size(); i++ ){
             //todo: output the balance workload
+            print_rebalance_workload( smap[stripe_selected[i].id][parity_count-1], a, stripe_selected[i].id, op.arrive_time,1, stdout ); 
             for( int j = 0; j < pages_per_sblock; i ++)
             {
                 raid_ssd.Ssds[smap[stripe_selected[i].id][parity_count-1]].event_arrive(READ, stripe_selected[i].id*pages_per_sblock + j, 1, op.arrive_time);
@@ -222,6 +235,9 @@ void SaRaid::check_reblance(const TraceRecord& op){
         }
         //读均衡
         if(read_opt){
+            //record algorithm time
+            auto start = system_clock::now();
+        
             std::vector<Read_pair> read_rank;
             read_rank.clear();
             std::map<uint, std::vector<double>>::iterator it;
@@ -264,6 +280,11 @@ void SaRaid::check_reblance(const TraceRecord& op){
                 need[i] = ssd_reads[i] - read_mean;
             }
 
+            //record alogrithm time
+            auto end   = system_clock::now();
+            auto duration = duration_cast<microseconds>(end - start);
+            fprintf(stdout, "rebalance_read_cost,%lf,%lf\n", op.arrive_time, double(duration.count()) * microseconds::period::num / microseconds::period::den);
+            
             for( int i = read_rank.size()-1; i>=0; i -- ){
                 if(miged >= max_mig){
                     break;
@@ -315,8 +336,9 @@ bool SaRaid::need_reblance(const TraceRecord& op){
     return false;
 }
 
-void SaRaid::print_ssd_erasures( FILE* stream ){
+void SaRaid::print_ssd_erasures( FILE* stream, double time ){
     double mean = 0;
+    fprintf(stream, "erasures_data,%lf,=,",time);
     for( int i = 0; i < ssd_count; i++ ){
         mean += erasure_left[i];
         fprintf(stream, "%lf,", erasure_left[i]);
@@ -335,6 +357,7 @@ void SaRaid::print_ssd_erasures( FILE* stream ){
     var = var / ssd_count;
     fprintf(stream, "0,%lf,%lf\n", mean, var);
 
+    fprintf(stream, "erasures_aim,%lf,=,",time);
     for( int i = 0; i < ssd_count; i++ ){
         fprintf(stream, "%lf,", aim[i]);
     }
@@ -343,7 +366,8 @@ void SaRaid::print_ssd_erasures( FILE* stream ){
 
 void SaRaid::check_and_print_stat( const TraceRecord& op,FILE* stream ){
 	if( need_print( op ) ){
-        print_ssd_erasures( stream );
-		raid_ssd.write_statistics(stream);
+        print_ssd_erasures( stream, op.arrive_time );
+		raid_ssd.write_statistics(stream, op.arrive_time);
+        raid_ssd.reset_statistics();
 	}
 }

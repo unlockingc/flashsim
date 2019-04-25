@@ -2,9 +2,14 @@
 #include <assert.h>
 #include <stdio.h>
 #include "ssd.h"
-#include <algorithm> 
+#include <algorithm>
+#include <chrono>
+#include <ctime>
 
+
+using namespace std::chrono;
 using namespace ssd;
+using namespace std;
 
 WlRaid::WlRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_, uint pages_per_sblock_, double var_thre_):\
 RaidParent( ssd_count_, pages_per_ssd_, parity_count_, ssd_erasures_, pages_per_sblock_  ),\
@@ -130,9 +135,16 @@ ulong lcm( ulong n, ulong m ){
     return n*m / GetCommonN(m, n);
 }
 
+inline void print_rebalance_workload( uint ssd1, uint ssd2, uint stripe_id, double time, double size, FILE* stream ){
+    fprintf( stream,"rebalance,time,=,%d,%d,%d,%lf\n", time,ssd1,ssd2,stripe_id,size);
+}
+
 void WlRaid::check_reblance(const TraceRecord& op){
 
     if( need_reblance(op) ){
+        //record algorithm time
+        auto start = system_clock::now();
+
         double mean = 0;
         for( int i = 0; i < ssd_count; i ++ ){
             mean += erasure_used[i];
@@ -170,24 +182,31 @@ void WlRaid::check_reblance(const TraceRecord& op){
         int loops = stripe_count / parity_lcm + ( stripe_count / parity_lcm != 0 );
         ulong total_miged = miged_per_loop *( loops );
                 
-
+        //record alogrithm time
+        auto end   = system_clock::now();
+        auto duration = duration_cast<microseconds>(end - start);
+        
 
         for( int i = 0; i < loops; i++ ){
             for( int j = 0; j < ssd_count; j ++ ){
-                if( moved[j] > 0 ) {
+                if( moved[j] != 0){
+                    print_rebalance_workload( j, 0, i*parity_lcm, op.arrive_time, abs(moved[j]),stdout );
                     for( int p = 0; p < pages_per_sblock; p ++ ){
                         raid_ssd.Ssds[j].event_arrive(READ, i*parity_lcm*pages_per_sblock + p, abs(moved[j]), op.arrive_time);
-                    }
-                } else {
-                    for( int p = 0; p < pages_per_sblock; p ++ ){
                         raid_ssd.Ssds[j].event_arrive(WRITE, i*parity_lcm*pages_per_sblock + p, abs(moved[j]), op.arrive_time);
                     }
                 }
             }
         }
-
+        
+        start = system_clock::now();
         redis_map( parity_dis );
 
+        //record alogrithm time
+        end = system_clock::now();
+        duration += duration_cast<microseconds>(end - start);
+        fprintf(stdout, "rebalance_read_cost,%lf,%lf\n", op.arrive_time, double(duration.count()) * microseconds::period::num / microseconds::period::den);
+ 
         last_parity_loop = new_parity_loop;
     }
 
@@ -218,8 +237,9 @@ bool WlRaid::need_reblance(const TraceRecord& op){
     return var >= var_thre;
 }
 
-void WlRaid::print_ssd_erasures( FILE* stream ){
+void WlRaid::print_ssd_erasures( FILE* stream, double time ){
     double mean = 0;
+    fprintf(stream, "erasure_data,%lf,=,",time);
     for( int i = 0; i < ssd_count; i++ ){
         mean += erasure_left[i];
         fprintf(stream, "%lf,", erasure_left[i]);
@@ -238,7 +258,8 @@ void WlRaid::print_ssd_erasures( FILE* stream ){
 
 void WlRaid::check_and_print_stat( const TraceRecord& op,FILE* stream ){
 	if( need_print( op ) ){
-        print_ssd_erasures( stream );
-		raid_ssd.write_statistics(stream);
+        print_ssd_erasures( stream,op.arrive_time );
+		raid_ssd.write_statistics(stream, op.arrive_time);
+        raid_ssd.reset_statistics();
 	}
 }
