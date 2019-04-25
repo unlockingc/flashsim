@@ -62,8 +62,9 @@ RaidSsd::~RaidSsd(void)
 }
 
 void RaidSsd::swap_ssd(uint id){
-	Ssds[id].~Ssd();
-	(void) new (&Ssds[id]) Ssd();
+	//todo: swap ssd
+	// Ssds[id].~Ssd();
+	// (void) new (&Ssds[id]) Ssd();
 }
 
 double RaidSsd::event_arrive(enum event_type type, ulong logical_address, uint size, double start_time)
