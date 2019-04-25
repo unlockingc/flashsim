@@ -57,7 +57,7 @@ int main(int argc, char **argv){
         (op.op == 'r'? read_total: write_total) +=raid->event_arrive(op);
         (op.op == 'r'? num_reads: num_writes) += ( op.size/4096 + (op.size%4096!=0) );
         if( trace_reader.line_now % 200 == 0 ){
-            printf("---lines: %d, total_writes: %lf, total_reads: %lf\n", trace_reader.line_now, write_total, read_total);
+            printf("---lines: %d, total_writes: %lf, total_reads: %lf\n", trace_reader.line_now, write_total/4096, read_total/4096);
         }
     }
 
