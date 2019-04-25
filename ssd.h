@@ -51,6 +51,7 @@ namespace ssd {
 #define REBALANCE_THRE 4000
 #define RAID_SSD_ERASURS 100000
 #define MIG_UPPER_BOUND 400*1024
+#define PRINT_INV 3*60
 
 /* Uncomment to disable asserts for production */
 #define NDEBUG
@@ -1168,6 +1169,7 @@ class RaidParent{
 		virtual bool need_print( const TraceRecord& op );
 		virtual void check_reblance(const TraceRecord& op);
 		virtual void print_migrate_data( uint start, uint end, FILE* stream);
+		virtual void print_ssd_erasures( FILE* stream, double time );
 		
 };
 
@@ -1180,13 +1182,12 @@ class SaRaid:public RaidParent{
 		
 		uint get_migrate_blocks_for_write( double var ); 
 		
-		void print_ssd_erasures( FILE* stream, double time );
-		
 		//virtual double event_arrive( const TraceRecord& op );
 		virtual bool need_reblance(const TraceRecord& op);
 		virtual void init_map();
 		virtual void check_reblance(const TraceRecord& op);
-		virtual void check_and_print_stat( const TraceRecord& op, FILE *stream );
+		// virtual void check_and_print_stat( const TraceRecord& op, FILE *stream );
+		virtual void print_ssd_erasures( FILE* stream, double time );
 		
 };
 
@@ -1200,13 +1201,12 @@ class WlRaid:public RaidParent{
 		WlRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1, double var_thre_ =  0.0003);
 		void redis_map( std::vector<ulong> new_parity_dis );
 		
-		void print_ssd_erasures( FILE* stream, double time );
-		
 		//virtual double event_arrive( const TraceRecord& op );
 		virtual bool need_reblance(const TraceRecord& op);
 		virtual void init_map();
 		virtual void check_reblance(const TraceRecord& op);
-		virtual void check_and_print_stat( const TraceRecord& op, FILE *stream );
+		// virtual void check_and_print_stat( const TraceRecord& op, FILE *stream );
+		// virtual void print_ssd_erasures( FILE* stream, double time );
 };
 
 class DiffRaid:public RaidParent{

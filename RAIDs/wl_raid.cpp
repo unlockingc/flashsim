@@ -284,29 +284,29 @@ bool WlRaid::need_reblance(const TraceRecord& op){
 //}
 
 
-void WlRaid::print_ssd_erasures( FILE* stream, double time ){
-    double mean = 0;
-    fprintf(stream, "erasure_data,%lf,=,",time);
-    for( int i = 0; i < ssd_count; i++ ){
-        mean += erasure_left[i];
-        fprintf(stream, "%lf,", erasure_left[i]);
-    }
+// void WlRaid::print_ssd_erasures( FILE* stream, double time ){
+//     double mean = 0;
+//     fprintf(stream, "erasure_data,%lf,=,",time);
+//     for( int i = 0; i < ssd_count; i++ ){
+//         mean += erasure_left[i];
+//         fprintf(stream, "%lf,", erasure_left[i]);
+//     }
 
-    mean /= (double) ssd_count;
+//     mean /= (double) ssd_count;
 
-    double var = 0;
-    for( int i = 0; i < ssd_count; i ++ ) { 
-        var += ((erasure_left[i] - mean)/ssd_erasures) * ((erasure_left[i] - mean)/ssd_erasures);
-    }
+//     double var = 0;
+//     for( int i = 0; i < ssd_count; i ++ ) { 
+//         var += ((erasure_left[i] - mean)/ssd_erasures) * ((erasure_left[i] - mean)/ssd_erasures);
+//     }
 
-    var = var / ssd_count;
-    fprintf(stream, "0,%lf,%lf\n", mean, var);
-}
+//     var = var / ssd_count;
+//     fprintf(stream, "0,%lf,%lf\n", mean, var);
+// }
 
-void WlRaid::check_and_print_stat( const TraceRecord& op,FILE* stream ){
-	if( need_print( op ) ){
-        print_ssd_erasures( stream,op.arrive_time );
-		raid_ssd.write_statistics(stream, op.arrive_time);
-        raid_ssd.reset_statistics();
-	}
-}
+// void WlRaid::check_and_print_stat( const TraceRecord& op,FILE* stream ){
+// 	if( need_print( op ) ){
+//         print_ssd_erasures( stream,op.arrive_time );
+// 		raid_ssd.write_statistics(stream, op.arrive_time);
+//         raid_ssd.reset_statistics();
+// 	}
+// }

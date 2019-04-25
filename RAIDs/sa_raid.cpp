@@ -212,7 +212,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
             }
             //todo: output the balance workload
             total_mig ++;
-            print_rebalance_workload( smap[stripe_selected[i].id][parity_count-1], a, stripe_selected[i].id, op.arrive_time,1, stdout ); 
+            //print_rebalance_workload( smap[stripe_selected[i].id][parity_count-1], a, stripe_selected[i].id, op.arrive_time,1, stdout ); 
             
             //todo: debug3
             // for( int j = 0; j < pages_per_sblock; j ++)
@@ -309,14 +309,16 @@ void SaRaid::check_reblance(const TraceRecord& op){
                             smap[read_rank[i].id][k] = read_rank[i].ssd1;
                         }
                     }
-
-                    for( int j = 0; j < pages_per_sblock; j ++)
-                    {
-                        raid_ssd.Ssds[read_rank[i].ssd1].event_arrive(READ, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
-                        raid_ssd.Ssds[read_rank[i].ssd2].event_arrive(WRITE, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
-                        raid_ssd.Ssds[read_rank[i].ssd2].event_arrive(READ, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
-                        raid_ssd.Ssds[read_rank[i].ssd1].event_arrive(WRITE, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
-                    }
+                    //print_rebalance_workload( read_rank[i].ssd1, read_rank[i].ssd2, read_rank[i].id, op.arrive_time,1, stdout ); 
+            
+                    //todo: debug3
+                    // for( int j = 0; j < pages_per_sblock; j ++)
+                    // {
+                    //     raid_ssd.Ssds[read_rank[i].ssd1].event_arrive(READ, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
+                    //     raid_ssd.Ssds[read_rank[i].ssd2].event_arrive(WRITE, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
+                    //     raid_ssd.Ssds[read_rank[i].ssd2].event_arrive(READ, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
+                    //     raid_ssd.Ssds[read_rank[i].ssd1].event_arrive(WRITE, read_rank[i].id*pages_per_sblock + j, 1, op.arrive_time);
+                    // }
                 }
             }
             fprintf(stdout, "rebalance_read_cost,%lf,%lf,=,%lf\n", op.arrive_time,total_miged_read, double(duration.count()) * microseconds::period::num / microseconds::period::den);
@@ -351,10 +353,12 @@ bool SaRaid::need_reblance(const TraceRecord& op){
 void SaRaid::print_ssd_erasures( FILE* stream, double time ){
     double mean = 0;
     fprintf(stream, "erasures_data,%lf,=,",time);
-    for( int i = 0; i < ssd_count; i++ ){
-        mean += (erasure_left[i]);
-        fprintf(stream, "%lf,", erasure_left[i]);
-    }
+    double erasure_real[ssd_count];
+	for( int i = 0; i < ssd_count; i ++ ){
+		fprintf(stream, "%lf,", erasure_left[i]);
+        erasure_real[i] = (erasure_left[i] - ssd_erasures * ssd_dead[i]);
+		mean += erasure_real[i];
+	}
 
     mean /= (double) ssd_count;
     
@@ -363,7 +367,7 @@ void SaRaid::print_ssd_erasures( FILE* stream, double time ){
     double aim[ssd_count];
     for( int i = 0; i < ssd_count; i ++ ) { 
         aim[i] = mean + diff_erasures[i];
-        var += ((erasure_left[i] - aim[i])/ssd_erasures) * ((erasure_left[i] - aim[i])/ssd_erasures);
+        var += ((erasure_real[i] - aim[i])/ssd_erasures) * ((erasure_real[i] - aim[i])/ssd_erasures);
     }
 
     var = var / ssd_count;
@@ -376,10 +380,10 @@ void SaRaid::print_ssd_erasures( FILE* stream, double time ){
     fprintf(stream, "0,%lf,%lf\n", mean, var);
 }
 
-void SaRaid::check_and_print_stat( const TraceRecord& op,FILE* stream ){
-	if( need_print( op ) ){
-        print_ssd_erasures( stream, op.arrive_time );
-		raid_ssd.write_statistics(stream, op.arrive_time);
-        raid_ssd.reset_statistics();
-	}
-}
+// void SaRaid::check_and_print_stat( const TraceRecord& op,FILE* stream ){
+// 	if( need_print( op ) ){
+//         print_ssd_erasures( stream, op.arrive_time );
+// 		raid_ssd.write_statistics(stream, op.arrive_time);
+//         raid_ssd.reset_statistics();
+// 	}
+// }

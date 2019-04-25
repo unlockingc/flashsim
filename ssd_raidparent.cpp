@@ -135,15 +135,40 @@ void RaidParent::swap_ssd( uint ssd_id, double time ) {
 	print_migrate_data(migrations.size() - 1, migrations.size() - 1, stdout);
 }
 
+void RaidParent::print_ssd_erasures( FILE* stream, double time ){
+    double mean = 0;
+    fprintf(stream, "erasures_data,%lf,=,",time);
+    double erasure_real[ssd_count];
+	for( int i = 0; i < ssd_count; i ++ ){
+		fprintf(stream, "%lf,", erasure_left[i]);
+        erasure_real[i] = (erasure_left[i] - ssd_erasures * ssd_dead[i]);
+		mean += erasure_real[i];
+	}
+
+    mean /= (double) ssd_count;
+    
+
+    double var = 0;
+    double aim[ssd_count];
+    for( int i = 0; i < ssd_count; i ++ ) { 
+        var += ((erasure_real[i] - mean)/ssd_erasures) * ((erasure_real[i] - mean)/ssd_erasures);
+    }
+
+    var = var / (double)ssd_count;
+    fprintf(stream, "0,%lf,%lf\n", mean, var);
+}
+
+
 void RaidParent::check_and_print_stat( const TraceRecord& op,FILE* stream ){
 	if( need_print( op ) ){
+		print_ssd_erasures( stream,op.arrive_time );
 		raid_ssd.write_statistics(stream, op.arrive_time);
 		raid_ssd.reset_statistics();
 	}
 }
 
 bool RaidParent::need_print( const TraceRecord& op ){
-	if( op.arrive_time - last_print_time > 3 * 60 ){
+	if( op.arrive_time - last_print_time > PRINT_INV ){
 		last_print_time = op.arrive_time;
 		return true;
 	}
