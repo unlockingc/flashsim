@@ -192,9 +192,21 @@ bool RaidParent::need_print( const TraceRecord& op ){
 // }
 
 
+void RaidParent::print_workload( FILE* stream, double time ){
+	fprintf(stream, "workload-write,%lf,%lf,=",time,total_writes);
+	for( int i = 0; i < ssd_count; i ++ ) { 
+        fprintf(stream, ",%lf",ssd_writes[i]);
+    }
+
+	fprintf(stream, "\nworkload-read,%lf,%lf,=,",time,total_reads);
+	for( int i = 0; i < ssd_count; i ++ ) { 
+        fprintf(stream, ",%lf",ssd_reads[i]);
+    }
+	fprintf(stream, "\n");
+}
+
 void RaidParent::check_reblance(const TraceRecord& op){
 	if( need_reblance( op ) ){
-
 		//clean data
         num_writes.clear();
         num_reads.clear();
@@ -211,7 +223,11 @@ void RaidParent::check_reblance(const TraceRecord& op){
 
 bool RaidParent::need_reblance(const TraceRecord& op){
     
-    return (total_writes >= REBALANCE_THRE);
+    if((total_writes >= REBALANCE_THRE)){
+        print_workload( stdout, op.arrive_time );
+        return true;
+    }
+    return false;;
 }
 
 void RaidParent::print_migrate_data( uint start, uint end, FILE* stream ){

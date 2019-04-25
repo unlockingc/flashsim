@@ -258,10 +258,12 @@ bool WlRaid::need_reblance(const TraceRecord& op){
 
     bool time_enough = false;
     if( total_writes > REBALANCE_THRE ){
+        print_workload( stdout, op.arrive_time );
         total_writes = 0;
         total_reads = 0;
         time_enough = true;
     }
+
 
     return (var >= var_thre) && time_enough;
 }

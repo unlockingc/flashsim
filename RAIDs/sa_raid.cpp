@@ -346,8 +346,11 @@ bool SaRaid::need_reblance(const TraceRecord& op){
     //     last_rtime = op.arrive_time;
     //     return true;
     // }
-
-    return (total_writes >= REBALANCE_THRE);
+    if((total_writes >= REBALANCE_THRE)){
+        print_workload( stdout, op.arrive_time );
+        return true;
+    }
+    return false;
 }
 
 void SaRaid::print_ssd_erasures( FILE* stream, double time ){

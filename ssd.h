@@ -1161,6 +1161,7 @@ class RaidParent{
 		double event_arrive( const TraceRecord& op );
 		void init();
 		void check_erasure_and_swap_ssd( int opSize, uint* ssd_ids, int num, double time );
+		void print_workload( FILE* stream, double time );
 		
 		virtual bool need_reblance(const TraceRecord& op);	
 		virtual void init_map();
