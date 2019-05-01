@@ -18,25 +18,53 @@ max_mig(max_mig_),diff_percent(diff_percent_),var_thre(var_thre_), read_opt(read
     assert(parity_count == 1);
 
     double diff_step = ssd_erasures * diff_percent;
+ 
     int mid = ssd_count / 2;
-    diff_erasures[0] = -4000;
-    for( int i = 0; i < ssd_count; i++ ){
-        double temp = i - mid;
-        diff_erasures[i] = diff_step*temp;
+    diff_erasures[0] = diff_step * mid;
+
+    for( int i = 1; i < ssd_count; i++ ){
+        diff_erasures[i] = diff_erasures[i-1] - diff_step;
     }
 
     init();
 }
 
 void SaRaid::init_map(){
+
+    std::vector<uint> parity_dis(ssd_count, 0);
+    std::vector<uint> parity_b(ssd_count, 0);
+    int mid = ssd_count /2;
+    int diff_temp = (int)(diff_percent * 100);
+    parity_dis[0] = 100 - diff_temp * mid; 
+    parity_b[0] = parity_dis[0];
+    for( int i = 1; i < parity_dis.size(); i++ ){
+        parity_dis[i] = parity_dis[i - 1] + diff_temp;
+        parity_b[i] += parity_b[i - 1] + parity_dis[i];
+    }
+
     int temp1 = 0;
     int temp2 = 0;
+    int p = 0;
+    int current = 0;
+
     for( uint i = 0; i < stripe_count; i++ ){
+        smap[i][ssd_count - 1] = current;
+
         for( uint j = 0; j < ssd_count; j ++ ){
-            smap[i][j] = (i + j)%ssd_count;
+            smap[i][j] = (current + j + 1) % ssd_count;
+        }
+
+        p ++;
+        if( p == parity_b[current] ){
+            current ++;
+            if( current == parity_b.size() ){
+                current = 0;
+                p = 0;
+            }
         }
     }
 }
+
 
 // double SaRaid::event_arrive( const TraceRecord& op ){
 //     check_reblance(op);
@@ -388,6 +416,42 @@ bool SaRaid::need_reblance(const TraceRecord& op){
 //     }
 //     fprintf(stream, "=,%lf,%lf\n", mean, var);
 // }
+
+void SaRaid::print_ssd_erasures( FILE* stream, double time ){
+    double mean = 0;
+    fprintf(stream, "erasures_data,%lf,=,",time);
+    double erasure_real[ssd_count];
+	for( int i = 0; i < ssd_count; i ++ ){
+        erasure_real[i] = (erasure_left[i] - ssd_erasures * ssd_dead[i]);
+        fprintf(stream, "%lf,", erasure_real[i]);
+		mean += erasure_real[i];
+	}
+
+    mean /= (double) ssd_count;
+    
+
+    double var = 0;
+    double aim[ssd_count];
+    for( int i = 0; i < ssd_count; i ++ ) { 
+        aim[i] = mean + diff_erasures[i];
+        var += ((erasure_real[i] - aim[i])/ssd_erasures) * ((erasure_real[i] - aim[i])/ssd_erasures);
+    }
+
+    var = var / ssd_count;
+    fprintf(stream, "=,%lf,%lf\n", mean, var);
+
+    fprintf(stream, "erasures_aim,%lf,=,",time);
+    for( int i = 0; i < ssd_count; i++ ){
+        fprintf(stream, "%lf,", aim[i]);
+    }
+    fprintf(stream, "=,%lf,%lf\n", mean, var);
+    
+    fprintf(stream, "erasures_need,%lf,=,",time);
+    for( int i = 0; i < ssd_count; i++ ){
+        fprintf(stream, "%lf,", aim[i] - erasure_real[i]);
+    }
+    fprintf(stream, "=,%lf,%lf\n", mean, var);
+}
 
 // void SaRaid::check_and_print_stat( const TraceRecord& op,FILE* stream ){
 // 	if( need_print( op ) ){
