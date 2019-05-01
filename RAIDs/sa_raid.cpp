@@ -226,9 +226,11 @@ void SaRaid::check_reblance(const TraceRecord& op){
 
         int a = 0;
         uint temp_id = 0;
-        while( rebalanced[a] >= 0 && a < ssd_count ){
+        while( rebalanced[a] >= 0 && a < (ssd_count - 1) ){
             a ++;
         }
+
+        assert( a < ssd_count );
 
         //record alogrithm time
         auto end   = system_clock::now();
@@ -265,7 +267,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
             
             rebalanced[a] += stripe_selected[i].val;
             if( rebalanced[a] >= 0 ){
-                while( rebalanced[a] >= 0 && a < ssd_count ){
+                while( rebalanced[a] >= 0 && a < (ssd_count - 1) ){
                     a ++;
                 }
                 assert( a < ssd_count );
