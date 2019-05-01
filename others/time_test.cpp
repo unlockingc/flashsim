@@ -44,7 +44,7 @@ int main(){
         num_writes.clear();
 
 
-        for( double p = 10 ; p < 10e4; p *= 1.1 ){
+        for( double p = 10 ; p < 10e4; p += 100 ){
             num_writes.clear();      
             gen_data(num_writes, (ulong)(p));
 
