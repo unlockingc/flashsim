@@ -258,6 +258,8 @@ void SaRaid::check_reblance(const TraceRecord& op){
                 }
             }
 
+            assert( smap[stripe_selected[i].id][temp_id] == a );
+
             smap[stripe_selected[i].id][temp_id] = smap[stripe_selected[i].id][parity_count-1];
             smap[stripe_selected[i].id][parity_count-1] = a;
             
