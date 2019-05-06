@@ -41,7 +41,7 @@ double RaidParent::event_arrive( const TraceRecord& op){
 		ssd_ids[i + 1] = smap[stripe_id][ssd_count-(i+1)];
 	}
 
-    int opSize = op.size/4096 + (op.size%4096 == 0?0:1); //write or read the whole block
+    int opSize = op.size/4096 + (op.size%4096 != 0); //write or read the whole block
     
     //record data todo:figure out count as pages or bits
     if( op.op == 'w' ){

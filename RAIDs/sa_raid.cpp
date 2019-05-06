@@ -198,7 +198,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
         stripe_rank.clear();
         std::map<uint, std::vector<double>>::iterator it;
         for(it=num_writes.begin();it!=num_writes.end();++it){
-            Stripe_oc temp(it->first, it->second[ssd_count - 1]);
+            Stripe_oc temp(it->first, it->second[smap[it->first][ssd_count - 1]]);
             stripe_rank.push_back(temp);
         }
 
@@ -210,7 +210,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
         double total_weight = 0;
         for( int i = stripe_rank.size()-1; i >= 0; i-- ){
             //todo: ensure that parity_count > 1 work
-            if(need[smap[stripe_rank[i].id][parity_count-1]] > 0){
+            if(need[smap[stripe_rank[i].id][ssd_count-1]] > 0){
                 stripe_selected.push_back(stripe_rank[i]);
                 total_weight +=stripe_rank[i].val;
 
@@ -242,14 +242,14 @@ void SaRaid::check_reblance(const TraceRecord& op){
             }
             //todo: output the balance workload
             total_mig ++;
-            //print_rebalance_workload( smap[stripe_selected[i].id][parity_count-1], a, stripe_selected[i].id, op.arrive_time,1, stdout ); 
+            //print_rebalance_workload( smap[stripe_selected[i].id][ssd_count-1], a, stripe_selected[i].id, op.arrive_time,1, stdout ); 
             
             //todo: debug3
             // for( int j = 0; j < pages_per_sblock; j ++)
             // {
-            //     raid_ssd.Ssds[smap[stripe_selected[i].id][parity_count-1]].event_arrive(READ, stripe_selected[i].id*pages_per_sblock + j, 1, op.arrive_time);
+            //     raid_ssd.Ssds[smap[stripe_selected[i].id][ssd_count-1]].event_arrive(READ, stripe_selected[i].id*pages_per_sblock + j, 1, op.arrive_time);
             //     raid_ssd.Ssds[a].event_arrive(READ, stripe_selected[i].id*pages_per_sblock + j, 1, op.arrive_time);
-            //     raid_ssd.Ssds[smap[stripe_selected[i].id][parity_count-1]].event_arrive(WRITE, stripe_selected[i].id*pages_per_sblock + j, 1, op.arrive_time);
+            //     raid_ssd.Ssds[smap[stripe_selected[i].id][ssd_count-1]].event_arrive(WRITE, stripe_selected[i].id*pages_per_sblock + j, 1, op.arrive_time);
             //     raid_ssd.Ssds[a].event_arrive(WRITE, stripe_selected[i].id*pages_per_sblock + j, 1, op.arrive_time);
             // }
             
@@ -262,8 +262,8 @@ void SaRaid::check_reblance(const TraceRecord& op){
 
             assert( smap[stripe_selected[i].id][temp_id] == a );
 
-            smap[stripe_selected[i].id][temp_id] = smap[stripe_selected[i].id][parity_count-1];
-            smap[stripe_selected[i].id][parity_count-1] = a;
+            smap[stripe_selected[i].id][temp_id] = smap[stripe_selected[i].id][ssd_count-1];
+            smap[stripe_selected[i].id][ssd_count-1] = a;
             
             rebalanced[a] += stripe_selected[i].val;
             if( rebalanced[a] >= 0 ){
