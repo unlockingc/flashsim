@@ -324,9 +324,10 @@ void SaRaid::check_reblance(const TraceRecord& op){
             //record alogrithm time
             auto end   = system_clock::now();
             auto duration = duration_cast<microseconds>(end - start);
-            double total_miged_read = 0; 
+            double total_miged_read = 0;
+            uint block_to_mig = get_migrate_blocks_for_write(var); 
             for( int i = read_rank.size()-1; i>=0; i -- ){
-                if(miged >= max_mig){
+                if(miged >= block_to_mig){
                     break;
                 }
 
