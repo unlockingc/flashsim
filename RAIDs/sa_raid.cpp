@@ -285,15 +285,16 @@ void SaRaid::check_reblance(const TraceRecord& op){
             uint max_id, min_id;
             ulong max = 0, min = 0;
             for(it=num_reads.begin();it!=num_reads.end();++it){
-                min = it->second[0];
                 max = it->second[0];
                 max_id = 0;
-                min_id = 0;
+                min_id = smap[it->first][ssd_count - 1] == 0? 1:0;
+                min = smap[it->first][ssd_count - 1] == 0?it->second[1] : it->second[0];
+                
                 for( int i = 0; i < ssd_count; i ++ ){
                     if( it->second[i] > max ){
                         max_id = i;
                         max = it->second[i];
-                    } else if( it->second[i] < min ){
+                    } else if( it->second[i] < min && i != smap[it->first][ssd_count - 1] ){
                         min_id = i;
                         min = it->second[i];
                     }

@@ -1180,7 +1180,7 @@ class SaRaid:public RaidParent{
 		double last_rtime,time_thre,max_mig,var_thre,diff_percent;
 		bool read_opt;
 		std::vector<double> diff_erasures;
-		SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1,double time_thre_ = 3 * 60 /*todo: debug2*/, double max_mig_ = MIG_UPPER_BOUND, double diff_percent_ = DIFF_VAR, double var_thre_ = 0.0003, bool read_opt_ = false );
+		SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1,double time_thre_ = 3 * 60 /*todo: debug2*/, double max_mig_ = MIG_UPPER_BOUND, double diff_percent_ = DIFF_VAR, double var_thre_ = 0.0003, bool read_opt_ = true );
 		
 		uint get_migrate_blocks_for_write( double var ); 
 		
