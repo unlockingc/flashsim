@@ -312,7 +312,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
             int miged = 0;
 
             double read_mean = 0;
-            double read_need[ssd_count];
+            //double read_need[ssd_count];
             for( int i = 0; i < ssd_count; i++ ){
                 read_mean += ssd_reads[i];
             }
@@ -337,10 +337,10 @@ void SaRaid::check_reblance(const TraceRecord& op){
                     for( int k = 0; k < ssd_count; k ++ ){
                         if( smap[read_rank[i].id][k] == read_rank[i].ssd1 ){
                             smap[read_rank[i].id][k] = read_rank[i].ssd2;
-                        }
-
-                        if( smap[read_rank[i].id][k] == read_rank[i].ssd2 ){
+                            continue;
+                        } else if( smap[read_rank[i].id][k] == read_rank[i].ssd2 ){
                             smap[read_rank[i].id][k] = read_rank[i].ssd1;
+                            continue;
                         }
                     }
                     //print_rebalance_workload( read_rank[i].ssd1, read_rank[i].ssd2, read_rank[i].id, op.arrive_time,1, stdout ); 
