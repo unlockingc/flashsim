@@ -153,10 +153,11 @@ double sigmod( double x ){
     return x/(1 + std::abs(x));
 }
 
-uint SaRaid::get_migrate_blocks_for_write( double var ){
+uint SaRaid::get_migrate_blocks_for_write( double var, double max_mig_period ){
     double x = (var/var_thre);
     double percent = (sigmod(9*x - 9) + sigmod(9))/2.0;
-    return (uint) (max_mig * percent);
+    //return (uint) (max_mig * percent);
+    return (uint) (max_mig_period * percent);
 }
 
 inline void print_rebalance_workload( uint ssd1, uint ssd2, uint stripe_id, double time, double size, FILE* stream ){
@@ -190,9 +191,15 @@ void SaRaid::check_reblance(const TraceRecord& op){
         }
     
         var = var / ssd_count;
+        double max_mig_period = 0;
+        for( int i = 0; i < ssd_count; i ++ ){
+            max_mig_period += ssd_writes[i];
+        }
         
-        uint block_to_mig = get_migrate_blocks_for_write(var);
+        uint block_to_mig = get_migrate_blocks_for_write(var, max_mig_period);
 
+        fprintf(stdout, "max_mig_period,%lf,%lf,%d,=,%lf,%lf,%lf,%lf,%lf\n", op.arrive_time,max_mig_period,block_to_mig,ssd_writes[0],ssd_writes[1],ssd_writes[2],ssd_writes[3],ssd_writes[4]);
+        
         //这里只移动parity,不过parity是被加权过的，排序，统计总权值，分给每个ssd
         std::vector<Stripe_oc> stripe_rank;
         stripe_rank.clear();
@@ -326,7 +333,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
             auto end   = system_clock::now();
             auto duration = duration_cast<microseconds>(end - start);
             double total_miged_read = 0;
-            uint block_to_mig = get_migrate_blocks_for_write(var); 
+            uint block_to_mig = get_migrate_blocks_for_write(var, max_mig); 
             for( int i = read_rank.size()-1; i>=0; i -- ){
                 if(miged >= block_to_mig){
                     break;

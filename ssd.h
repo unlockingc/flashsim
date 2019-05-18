@@ -53,6 +53,7 @@ namespace ssd {
 #define MIG_UPPER_BOUND 400*1024
 #define PRINT_INV 3*60
 #define DIFF_VAR 0.0
+#define VAR_THRE 0.0025
 
 /* Uncomment to disable asserts for production */
 #define NDEBUG
@@ -1180,9 +1181,9 @@ class SaRaid:public RaidParent{
 		double last_rtime,time_thre,max_mig,var_thre,diff_percent;
 		bool read_opt;
 		std::vector<double> diff_erasures;
-		SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1,double time_thre_ = 3 * 60 /*todo: debug2*/, double max_mig_ = MIG_UPPER_BOUND, double diff_percent_ = DIFF_VAR, double var_thre_ = 0.0003, bool read_opt_ = true );
+		SaRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1,double time_thre_ = 3 * 60 /*todo: debug2*/, double max_mig_ = MIG_UPPER_BOUND, double diff_percent_ = DIFF_VAR, double var_thre_ = VAR_THRE, bool read_opt_ = false  );
 		
-		uint get_migrate_blocks_for_write( double var ); 
+		uint get_migrate_blocks_for_write( double var, double max_mig_period ); 
 		
 		//virtual double event_arrive( const TraceRecord& op );
 		virtual bool need_reblance(const TraceRecord& op);
@@ -1200,7 +1201,7 @@ class WlRaid:public RaidParent{
 		std::vector<ulong> last_parity_dis;
 
 		std::vector<double> erasure_used;
-		WlRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1, double var_thre_ =  0.0003);
+		WlRaid(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1, double var_thre_ =  VAR_THRE);
 		void redis_map( std::vector<ulong> new_parity_dis );
 		
 		//virtual double event_arrive( const TraceRecord& op );
