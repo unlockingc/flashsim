@@ -1233,6 +1233,14 @@ class Raid5:public RaidParent{
 		virtual void init_map();
 };
 
+class Raid0:public RaidParent{
+	public:
+		Raid0(uint ssd_count_, uint pages_per_ssd_, uint parity_count_ = 0, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);
+		
+		//virtual double event_arrive( const TraceRecord& op );
+		virtual void init_map();
+};
+
 class Raid6:public RaidParent{
 	public:
 		Raid6(uint ssd_count_, uint pages_per_ssd_, uint parity_count_, double ssd_erasures_ = 40000, uint pages_per_sblock_ = 1);

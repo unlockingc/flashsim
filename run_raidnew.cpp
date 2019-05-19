@@ -24,7 +24,9 @@ int main(int argc, char **argv){
 
     double ssd_erasures = RAID_SSD_ERASURS;/*todo: debug3*/
 
-    if( raid_type == "raid5" ){
+    if( raid_type == "raid0" ){
+        raid = new Raid0(RAID_NUMBER_OF_PHYSICAL_SSDS, pages_per_ssd, 0, ssd_erasures );
+    } else if( raid_type == "raid5" ){
         raid = new Raid5(RAID_NUMBER_OF_PHYSICAL_SSDS, pages_per_ssd, 1, ssd_erasures );
     } else if( raid_type == "raid6" ){
         raid = new Raid6(RAID_NUMBER_OF_PHYSICAL_SSDS, pages_per_ssd, 2, ssd_erasures );
