@@ -306,7 +306,7 @@ void SaRaid::check_reblance(const TraceRecord& op){
                         min = it->second[i];
                     }
                 }
-                if( max - min > 10)//todo: give a num
+                if( max - min > 3)//todo: give a num
                 {
                     Read_pair temp(it->first, max_id, min_id, max - min);
                     read_rank.push_back(temp);
@@ -333,7 +333,15 @@ void SaRaid::check_reblance(const TraceRecord& op){
             auto end   = system_clock::now();
             auto duration = duration_cast<microseconds>(end - start);
             double total_miged_read = 0;
-            uint block_to_mig = get_migrate_blocks_for_write(var, max_mig); 
+
+            double var_read = 0;
+            for( int i = 0; i < ssd_count; i ++ ){
+                var_read += ((ssd_reads[i] - read_mean)/read_mean) * ((ssd_reads[i] - read_mean)/read_mean);
+            }
+
+            var_read /= ssd_count;
+
+            uint block_to_mig = get_migrate_blocks_for_write(var_read, max_mig); 
             for( int i = read_rank.size()-1; i>=0; i -- ){
                 if(miged >= block_to_mig){
                     break;
@@ -387,7 +395,7 @@ bool SaRaid::need_reblance(const TraceRecord& op){
     //     last_rtime = op.arrive_time;
     //     return true;
     // }
-    if((total_writes >= REBALANCE_THRE) ||(total_reads >= REBALANCE_THRE) ){
+    if((total_writes >= REBALANCE_THRE) ||(total_reads >= REBALANCE_THRE*3) ){
         print_workload( stdout, op.arrive_time );
         return true;
     }
