@@ -358,6 +358,8 @@ void SaRaid::check_reblance(const TraceRecord& op){
                             continue;
                         }
                     }
+                    need[read_rank[i].ssd1] -= read_rank[i].val;
+                    need[read_rank[i].ssd2] += read_rank[i].val;
                     //print_rebalance_workload( read_rank[i].ssd1, read_rank[i].ssd2, read_rank[i].id, op.arrive_time,1, stdout ); 
             
                     //todo: debug3
