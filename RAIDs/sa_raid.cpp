@@ -156,8 +156,8 @@ double sigmod( double x ){
 uint SaRaid::get_migrate_blocks_for_write( double var, double max_mig_period ){
     double x = (var/var_thre);
     double percent = (sigmod(9*x - 9) + sigmod(9))/2.0;
-    //return (uint) (max_mig * percent);
-    return (uint) (max_mig_period * percent);
+    return (uint) (max_mig * percent);
+    //return (uint) (max_mig_period * percent);
 }
 
 inline void print_rebalance_workload( uint ssd1, uint ssd2, uint stripe_id, double time, double size, FILE* stream ){

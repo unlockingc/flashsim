@@ -53,7 +53,7 @@ namespace ssd {
 #define MIG_UPPER_BOUND 400*1024
 #define PRINT_INV 3*60
 #define DIFF_VAR 0.0
-#define VAR_THRE 0.0025
+#define VAR_THRE 0.0003
 
 /* Uncomment to disable asserts for production */
 #define NDEBUG
