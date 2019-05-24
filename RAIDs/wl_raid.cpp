@@ -236,7 +236,9 @@ void WlRaid::check_reblance(const TraceRecord& op){
 
 
 bool WlRaid::need_reblance(const TraceRecord& op){
-    
+    //debug
+    num_reads.clear();
+
     for( int i = 0; i< ssd_count; i++ ){
         erasure_used[i] = ssd_erasures - erasure_left[i] + ssd_erasures * ssd_dead[i];
         erasure_used[i] = (double)((ulong)(erasure_used[i]) % (ulong)(3*ssd_erasures)); //todo: make sure max - min 3*ssd_erasures;

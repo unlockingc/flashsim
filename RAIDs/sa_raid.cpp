@@ -387,7 +387,7 @@ bool SaRaid::need_reblance(const TraceRecord& op){
     //     last_rtime = op.arrive_time;
     //     return true;
     // }
-    if((total_writes >= REBALANCE_THRE)){
+    if((total_writes >= REBALANCE_THRE) ||(total_reads >= REBALANCE_THRE) ){
         print_workload( stdout, op.arrive_time );
         return true;
     }

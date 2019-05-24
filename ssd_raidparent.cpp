@@ -221,7 +221,7 @@ void RaidParent::check_reblance(const TraceRecord& op){
 
 bool RaidParent::need_reblance(const TraceRecord& op){
     
-    if((total_writes >= REBALANCE_THRE)){
+    if((total_writes >= REBALANCE_THRE) ||(total_reads >= REBALANCE_THRE) ){
         print_workload( stdout, op.arrive_time );
         return true;
     }
