@@ -59,7 +59,8 @@ int main(int argc, char **argv){
         (op.op == 'r'? read_total: write_total) +=raid->event_arrive(op);
         (op.op == 'r'? num_reads: num_writes) += ( op.size/4096 + (op.size%4096!=0) );
         if( trace_reader.line_now % 200 == 0 ){
-            printf("---lines: %d, total_writes: %lf, total_reads: %lf\n", trace_reader.line_now, write_total/4096, read_total/4096);
+            printf("write_latency, %lf, %lf, %lf\n",num_writes, write_total, write_total/num_writes);
+            printf("read_latency, %lf, %lf, %lf\n",num_reads, read_total, read_total/num_reads);
         }
     }
 

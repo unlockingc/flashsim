@@ -78,11 +78,13 @@ double RaidParent::event_arrive( const TraceRecord& op){
     }
 
     double time = 0,single_time;
-    for( int i = 0; i < 1 + parity_count; i ++ ){
+    for( int i = 0; i < 1 + (op.op == 'r'?0:parity_count); i ++ ){
         single_time = raid_ssd.Ssds[ssd_ids[i]].event_arrive(op.op == 'r'?READ:WRITE, tranlated_addr, 1, op.arrive_time);
-        if( time < single_time ){
-            time = single_time;
-        }
+        //todo: check
+		// if( time < single_time ){
+        //     time = single_time;
+        // }
+		time += single_time;
     }
     return time;
 }

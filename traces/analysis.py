@@ -11,10 +11,10 @@ from matplotlib.figure import Figure
 # a = (a[0:-1] + a[1:])/2
 # print(a)
 
-csvpath = "full/Financial1.spc";
+csvpath = "full/WebSearch3.spc";
 obj = pandas.read_csv(csvpath,header=None, names=['diskno', 'addr','size','type','time']);
-print(obj.values[1,:])
-obj = obj[obj['type']=='w']
+print(obj.values)
+obj = obj[((obj['type']=='r') | (obj['type']=='R'))]
 addrs=obj.values[:,1]
 print(len(addrs))
 # for i in range(0,100):

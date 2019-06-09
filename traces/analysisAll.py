@@ -11,10 +11,10 @@ from matplotlib.figure import Figure
 # a = (a[0:-1] + a[1:])/2
 # print(a)
 
-csvpath = "full/Financial2.spc";
+csvpath = "full/WebSearch1.spc";
 obj = pandas.read_csv(csvpath,header=None, names=['diskno', 'addr','size','type','time']);
 print(obj.values[1,:])
-obj = obj[obj['type']=='w']
+obj = obj[obj['type']=='R']
 for i in range(0,100):
     addrs = obj.values[i*4000:(i+2)*4000,1]
     print(addrs.min())
