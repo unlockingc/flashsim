@@ -37,9 +37,9 @@ int main(int argc, char **argv){
     } else if( raid_type == "diffRaid" ){
         vector<uint> parity_dis(RAID_NUMBER_OF_PHYSICAL_SSDS,0);
         for( int i = 0; i < RAID_NUMBER_OF_PHYSICAL_SSDS; i++ ){
-            parity_dis[i] = 15;
+            parity_dis[i] = 0;
         }
-        parity_dis[0] = 40;
+        parity_dis[0] = 100;
         raid = new DiffRaid(parity_dis,RAID_NUMBER_OF_PHYSICAL_SSDS, pages_per_ssd, 1, ssd_erasures );
     } else {
         fprintf(stderr, "error raid type %s\nsupport types are:\n\traid5\n\traid6\n\tsaRaid\n\twlRaid\n\tdiffRaid \n\n", raid_type.c_str());

@@ -224,7 +224,7 @@ void Event::print(FILE *stream)
 	address.print(stream);
 	if(type == MERGE)
 		merge_address.print(stream);
-	fprintf(stream, " Time[%f, %f) Bus_wait: %f\n", start_time, start_time + time_taken, bus_wait_time);
+	fprintf(stream, " Time[%f, %f) time_taken: %f, Bus_wait: %f\n", start_time, start_time + time_taken, time_taken, bus_wait_time);
 	return;
 }
 

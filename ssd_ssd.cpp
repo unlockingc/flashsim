@@ -172,6 +172,8 @@ double Ssd::event_arrive(enum event_type type, ulong logical_address, uint size,
 
 	/* use start_time as a temporary for returning time taken to service event */
 	start_time = event -> get_time_taken();
+	//dd hou
+	//event->print(stdout);
 	delete event;
 	return start_time;
 }
